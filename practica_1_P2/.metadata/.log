@@ -1,0 +1,31 @@
+!SESSION 2025-09-01 10:36:47.828 -----------------------------------------------
+eclipse.buildId=Version 1.19.0
+java.version=21.0.3
+java.vendor=Eclipse Adoptium
+BootLoader constants: OS=win32, ARCH=x86_64, WS=win32, NL=es_AR
+Framework arguments:  D:\CESE_25_Embebidos\practica_0_template\.project
+Command-line arguments:  -os win32 -ws win32 -arch x86_64 D:\CESE_25_Embebidos\practica_0_template\.project
+
+!ENTRY com.st.stm32cube.ide.mcu.informationcenter 4 4 2025-09-01 10:37:15.112
+!MESSAGE CubeMX plugin appears to be active, Log4j initialization might be too late.
+
+!ENTRY com.st.stm32cube.ide.mcu.informationcenter 1 1 2025-09-01 10:37:15.114
+!MESSAGE Log4j2 initialized with config file D:\CESE_25_Embebidos\practica_0_template\.metadata\.log4j2.xml
+
+!ENTRY com.st.stm32cube.ide.mcu.ide 1 1 2025-09-01 10:37:18.259
+!MESSAGE Started RMI Server, listening on port 41337
+!SESSION 2025-09-01 10:39:29.217 -----------------------------------------------
+eclipse.buildId=Version 1.19.0
+java.version=21.0.3
+java.vendor=Eclipse Adoptium
+BootLoader constants: OS=win32, ARCH=x86_64, WS=win32, NL=es_AR
+Command-line arguments:  -os win32 -ws win32 -arch x86_64
+
+!ENTRY com.st.stm32cube.ide.mcu.informationcenter 4 4 2025-09-01 10:39:44.630
+!MESSAGE CubeMX plugin appears to be active, Log4j initialization might be too late.
+
+!ENTRY com.st.stm32cube.ide.mcu.informationcenter 1 1 2025-09-01 10:39:44.631
+!MESSAGE Log4j2 initialized with config file D:\CESE_25_Embebidos\practica_0_template\.metadata\.log4j2.xml
+
+!ENTRY com.st.stm32cube.ide.mcu.ide 1 1 2025-09-01 10:39:48.108
+!MESSAGE Started RMI Server, listening on port 41337
