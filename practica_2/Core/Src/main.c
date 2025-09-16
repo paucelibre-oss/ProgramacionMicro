@@ -64,6 +64,7 @@ static void MX_USART2_UART_Init(void);
   */
 int main(void)
 {
+
   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
@@ -103,29 +104,30 @@ int main(void)
 
   delayInit(&delayLed, (tick_t)(blinkPattern[patternIndex].period / 2)); /*Para inicializar el delay con 50% ciclo util.*/
   /* USER CODE END 2 */
+
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    /* USER CODE END WHILE */
-	  if(delayRead(&delayLed)){
-		  ledState = !ledState;
-		  HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
-		  delayWrite(&delayLed, (tick_t)(blinkPattern[patternIndex].period / 2)); /*Para actualizar el delay con 50% ciclo util.*/
-          if (!ledState) {
-              repeatCount++;
-              if (repeatCount >= blinkPattern[patternIndex].repeats) {
-                  repeatCount = 0;
-                  patternIndex++;
-                  if (patternIndex >= (sizeof(blinkPattern)/sizeof(blinkPattern[0]))) {
-                      patternIndex = 0;  // reinicia patrón
-                  }
-              }
-          }
-	  }
-    /* USER CODE BEGIN 3 */
-  }
-  /* USER CODE END 3 */
+	  /* USER CODE END WHILE */
+	 	  if(delayRead(&delayLed)){
+	 		  ledState = !ledState;
+	 		  HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+	 		  delayWrite(&delayLed, (tick_t)(blinkPattern[patternIndex].period / 2)); /*Para actualizar el delay con 50% ciclo util.*/
+	           if (!ledState) {
+	               repeatCount++;
+	               if (repeatCount >= blinkPattern[patternIndex].repeats) {
+	                   repeatCount = 0;
+	                   patternIndex++;
+	                   if (patternIndex >= (sizeof(blinkPattern)/sizeof(blinkPattern[0]))) {
+	                       patternIndex = 0;  // reinicia patrón
+	                   }
+	               }
+	           }
+	 	  }
+	     /* USER CODE BEGIN 3 */
+	   }
+	   /* USER CODE END 3 */
 }
 
 /**
@@ -216,6 +218,9 @@ static void MX_USART2_UART_Init(void)
 static void MX_GPIO_Init(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
+  /* USER CODE BEGIN MX_GPIO_Init_1 */
+
+  /* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOC_CLK_ENABLE();
@@ -239,6 +244,9 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(LD2_GPIO_Port, &GPIO_InitStruct);
 
+  /* USER CODE BEGIN MX_GPIO_Init_2 */
+
+  /* USER CODE END MX_GPIO_Init_2 */
 }
 
 /* USER CODE BEGIN 4 */
@@ -302,8 +310,7 @@ void Error_Handler(void)
   }
   /* USER CODE END Error_Handler_Debug */
 }
-
-#ifdef  USE_FULL_ASSERT
+#ifdef USE_FULL_ASSERT
 /**
   * @brief  Reports the name of the source file and the source line number
   *         where the assert_param error has occurred.
