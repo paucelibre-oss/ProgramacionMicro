@@ -3,7 +3,7 @@
 
 ### Punto 1.
 - El punto 1 fue implementado por completo y debe imprimir en consola, algo así:
-
+'''
     ---- UART configuration parameters ----
      
     BaudRate: 115200
@@ -16,6 +16,6 @@
     
     --------------------------------------
     ---- Successful UART configuration ----
-
+'''
 ### El punto 2 (Opcional). No fue implementado en totalidad.
 - Se dehan expresadas e implementadas las funciones referentes a la máquina de estado y demás procesos, pero no se refleja funcionamiento en el main.c
