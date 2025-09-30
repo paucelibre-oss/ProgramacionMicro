@@ -1,0 +1,52 @@
+/*
+ * API_uart.c
+ *
+ *  Created on: Sep 25, 2025
+ *      Author: Paulo
+ */
+#include "../Inc/API_uart.h"
+
+bool_t uartInit(void){
+
+	if(UART_Init()){
+
+	}
+
+	return false;
+}
+
+void UART_PrintHandle(UART_HandleTypeDef *huart)
+{
+//    char msg[100];
+//
+//    // BaudRate
+//    sprintf(msg, "BaudRate: %lu\r\n", huart->Init.BaudRate);
+//    HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
+//
+//    // WordLength
+//    sprintf(msg, "WordLength: %lu\r\n", huart->Init.WordLength);
+//    HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
+//
+//    // StopBits
+//    sprintf(msg, "StopBits: %lu\r\n", huart->Init.StopBits);
+//    HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
+//
+//    // Parity
+//    sprintf(msg, "Parity: %lu\r\n", huart->Init.Parity);
+//    HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
+//
+//    // Mode
+//    sprintf(msg, "Mode: %lu\r\n", huart->Init.Mode);
+//    HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
+//
+//    // Oversampling
+//    sprintf(msg, "Oversampling: %lu\r\n", huart->Init.OverSampling);
+//    HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
+//
+//    // Estado de la HAL
+//    sprintf(msg, "gState: %u, RxState: %u\r\n", huart->gState, huart->RxState);
+//    HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
+}
+void uartSendString(uint8_t * pstring);
+void uartSendStringSize(uint8_t * pstring, uint16_t size);
+void uartReceiveStringSize(uint8_t * pstring, uint16_t size);

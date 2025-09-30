@@ -1,0 +1,81 @@
+/*
+ * API_uart.c
+ *
+ *  Created on: Sep 25, 2025
+ *      Author: Paulo
+ */
+#include "../Inc/API_uart.h"
+
+static void UART_PrintHandle(UART_HandleTypeDef *huart);
+
+bool_t uartInit(void){
+
+	if(UART_Init()){
+		UART_PrintHandle(&huart2);
+		return true;
+	}
+
+	return false;
+}
+
+static void UART_PrintHandle(UART_HandleTypeDef *huart)
+{
+	if(huart == NULL) return;
+
+    char msg[MAX_LEN_STRING];
+    int sizeMsg;
+
+    uartSendString((uint8_t*)("\r\n---- UART configuration parameters ----\r\n\r\n"));
+    // BaudRate
+    sizeMsg = snprintf(msg, (size_t)(MAX_LEN_STRING), "BaudRate: %lu\r\n", huart->Init.BaudRate);
+    if(sizeMsg > MAX_LEN_STRING) uartSendString((uint8_t*)("The value BaudRate could not be converted.\r\n"));
+    else uartSendString((uint8_t*)(msg));
+
+    // WordLength
+    sizeMsg = snprintf(msg, (size_t)(MAX_LEN_STRING), "WordLength: %lu\r\n", huart->Init.WordLength);
+    if(sizeMsg > MAX_LEN_STRING) uartSendString((uint8_t*)("The value WordLength could not be converted.\r\n"));
+    else uartSendString((uint8_t*)(msg));
+
+    // StopBits
+    sizeMsg = snprintf(msg, (size_t)(MAX_LEN_STRING), "StopBits: %lu\r\n", huart->Init.StopBits);
+    if(sizeMsg > MAX_LEN_STRING) uartSendString((uint8_t*)("The value StopBits could not be converted.\r\n"));
+    else uartSendString((uint8_t*)(msg));
+
+    // Parity
+    sizeMsg = snprintf(msg, (size_t)(MAX_LEN_STRING), "Parity: %lu\r\n", huart->Init.Parity);
+    if(sizeMsg > MAX_LEN_STRING) uartSendString((uint8_t*)("The value Parity could not be converted.\r\n"));
+    else uartSendString((uint8_t*)(msg));
+
+    // Mode
+    sizeMsg = snprintf(msg, (size_t)(MAX_LEN_STRING), "Mode: %lu\r\n", huart->Init.Mode);
+    if(sizeMsg > MAX_LEN_STRING) uartSendString((uint8_t*)("The value Mode could not be converted.\r\n"));
+    else uartSendString((uint8_t*)(msg));
+
+    // Oversampling
+    sizeMsg = snprintf(msg, (size_t)(MAX_LEN_STRING), "Oversampling: %lu\r\n", huart->Init.OverSampling);
+    if(sizeMsg > MAX_LEN_STRING) uartSendString((uint8_t*)("The value Oversampling could not be converted.\r\n"));
+    else uartSendString((uint8_t*)(msg));
+
+    // Estado de la HAL
+    sizeMsg = snprintf(msg, (size_t)(MAX_LEN_STRING), "gState: %u, RxState: %u\r\n", huart->gState, huart->RxState);
+    if(sizeMsg > MAX_LEN_STRING) uartSendString((uint8_t*)("The value RxState could not be converted.\r\n"));
+    else uartSendString((uint8_t*)(msg));
+
+    uartSendString((uint8_t*)("\r\n---------------------------------------\r\n"));
+}
+void uartSendString(uint8_t * pstring)
+{
+	const char errorPstring[] = "[uartSendString] The pointer to the string is null!\r\n";
+	if(pstring == NULL) HAL_UART_Transmit(&huart2, (uint8_t*)(errorPstring), strlen(errorPstring), HAL_MAX_DELAY);
+	HAL_UART_Transmit(&huart2, pstring, strlen((const char*)(pstring)), HAL_MAX_DELAY);
+}
+
+
+void uartSendStringSize(uint8_t * pstring, uint16_t size)
+{
+	const char errorPstring[] = "[uartSendStringSize] The pointer to the string is null!";
+	if(pstring == NULL) HAL_UART_Transmit(&huart2, (uint8_t*)(errorPstring), strlen(errorPstring), HAL_MAX_DELAY);
+	HAL_UART_Transmit(&huart2, pstring, size, HAL_MAX_DELAY);
+}
+
+void uartReceiveStringSize(uint8_t * pstring, uint16_t size);

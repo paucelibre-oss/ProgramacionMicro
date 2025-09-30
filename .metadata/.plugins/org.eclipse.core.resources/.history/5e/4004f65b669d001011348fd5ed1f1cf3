@@ -1,0 +1,94 @@
+/*
+ * API_cmdparser.c
+ *
+ *  Created on: Sep 27, 2025
+ *      Author: Paulo
+ */
+
+#include "API_cmdparser.h"
+#include <string.h>
+#include <ctype.h>
+#include <stdio.h>
+
+
+// Buffer de recepción
+static char line_buf[CMD_MAX_LINE];
+static size_t line_len = 0;
+static cmd_state_t state = CMD_IDLE;
+static uint32_t timeout_acc = 0; // acumulador para timeout
+
+
+// callbacks
+static void (*send_cb)(const char *buf, size_t len) = NULL;
+static void (*enqueue_cb)(const cmd_action_t *act) = NULL;
+
+
+// helpers
+static void safe_send(const char *s) {
+	if (!send_cb) return;
+	size_t l = strlen(s);
+	send_cb(s, l);
+}
+
+
+static void send_resp(const char *s) {
+	// ensure ending with \r\n
+	char tmp[128];
+	size_t l = strlen(s);
+
+	if (l + 3 < sizeof(tmp)) {
+		strcpy(tmp, s);
+		if (l < 2 || !(s[l-1] == '\n' && s[l-2] == '\r')) {
+			// append \r\n
+			if (l > 0 && s[l-1] == '\n') {
+				// only add \r before
+				tmp[l-1] = '\r';
+				tmp[l] = '\n';
+				tmp[l+1] = '\0';
+			} else if (l > 0 && s[l-1] == '\r') {
+				tmp[l] = '\n'; tmp[l+1] = '\0';
+			} else {
+				tmp[l] = '\r'; tmp[l+1] = '\n'; tmp[l+2] = '\0';
+			}
+		}
+		safe_send(tmp);
+	} else {
+		// fallback
+		safe_send(s);
+		safe_send("\r\n");
+	}
+}
+
+
+static void reset_line(void) {
+line_len = 0;
+if (line_buf) line_buf[0] = '\0';
+timeout_acc = 0;
+state = CMD_IDLE;
+}
+
+
+void cmdInit(void (*send_cb_in)(const char *buf, size_t len), void (*enqueue_cb_in)(const cmd_action_t *act)) {
+send_cb = send_cb_in;
+enqueue_cb = enqueue_cb_in;
+reset_line();
+}
+
+
+void cmdReset(void) {
+reset_line();
+}
+
+
+size_t cmdPollUart(const uint8_t *buf, size_t len) {
+if (!buf || len == 0) return 0;
+size_t consumed = 0;
+size_t maxc = (len > CMD_POLL_MAX_BYTES) ? CMD_POLL_MAX_BYTES : len;
+
+
+for (size_t i = 0; i < maxc; ++i) {
+char c = (char)buf[i];
+consumed++;
+// State transitions
+if (state == CMD_IDLE) {
+// ignore leading CR/LF

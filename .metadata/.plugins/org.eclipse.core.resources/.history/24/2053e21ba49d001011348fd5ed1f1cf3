@@ -1,0 +1,95 @@
+/*
+ * API_cmdparser.h
+ *
+ *  Created on: Sep 27, 2025
+ *      Author: Paulo
+ */
+
+#ifndef API_INC_API_CMDPARSER_H_
+#define API_INC_API_CMDPARSER_H_
+
+#include <stdint.h>
+#include <stddef.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+#include <stdio.h>
+
+
+#define CMD_MAX_LINE 64 // bytes, includes terminator '\0'
+#define CMD_MAX_TOKENS 5 // COMANDO + hasta 4 args
+#define CMD_POLL_MAX_BYTES 16 // máximo bytes leídos por invocación
+#define T_LINE_TIMEOUT_MS 1000u // tiempo de timeout en ms
+
+
+typedef enum {
+	CMD_OK = 0,
+	CMD_ERR_TIMEOUT,
+	CMD_ERR_OVERFLOW,
+	CMD_ERR_SYNTAX,
+	CMD_ERR_UNKNOWN,
+	CMD_ERR_ARG
+} cmd_status_t;
+
+
+// MEF states (exposed for debug if needed)
+typedef enum {
+	CMD_IDLE = 0,
+	CMD_RECV,
+	CMD_PARSE,
+	CMD_EXEC,
+	CMD_ERROR,
+	CMD_TIMEOUT_STATE
+} cmd_state_t;
+
+
+// Actions encolables
+typedef enum {
+	ACT_NONE = 0,
+	ACT_HELP,
+	ACT_LED,
+	ACT_STATUS,
+	ACT_BAUD_GET,
+	ACT_BAUD_SET,
+	ACT_CLEAR
+} cmd_action_type_t;
+
+
+typedef enum { LED_OFF = 0, LED_ON, LED_TOGGLE } led_action_t;
+
+
+typedef struct {
+	cmd_action_type_t type;
+	union {
+		struct {
+			led_action_t action;
+		} led;
+		struct {
+			uint32_t baud;
+		} baud_set;
+	} args;
+} cmd_action_t;
+
+/*
+ * @brief cmdInit: To initialize the parser.
+ * @param send_cb: Function to send bytes/responses (make sure they end in \r\n if desired).
+ * @param enqueue_cb:  Function to queue detected actions (a copy of cmd_action_t will be returned).
+*/
+void cmdInit(void (*send_cb)(const char *buf, size_t len), void (*enqueue_cb)(const cmd_action_t *act));
+
+/*
+ * @brief cmdPollUart: Processes up to CMD_POLL_MAX_BYTES of the UART buffer. Non-blocking.
+ * @param buf: Pointer to bytes received.
+ * @param len: Available length (at most CMD_POLL_MAX_BYTES are processed).
+ * @return size_t: Number of bytes consumed.
+ */
+size_t cmdPollUart(const uint8_t *buf, size_t len);
+
+/*
+ * @brief cmdReset: Force reset of internal state and clearing of buffer.
+ * @param None.
+ * @return None.
+ */
+void cmdReset(void);
+
+#endif /* API_INC_API_CMDPARSER_H_ */

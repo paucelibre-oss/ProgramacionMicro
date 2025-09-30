@@ -1,0 +1,104 @@
+/*
+ * API_cmdparser.c
+ *
+ *  Created on: Sep 27, 2025
+ *      Author: Paulo
+ */
+#include "API_cmdparser.h"
+#include <string.h>
+#include <ctype.h>
+#include <stdio.h>
+
+// Buffer de recepción
+static char line_buf[CMD_MAX_LINE];
+static size_t line_len = 0;
+static cmd_state_t state = CMD_IDLE;
+static uint32_t timeout_acc = 0; // acumulador para timeout
+
+// callbacks
+static void (*send_cb)(const char *buf, size_t len) = NULL;
+static void (*enqueue_cb)(const cmd_action_t *act) = NULL;
+
+// helpers ------------------------------------------------
+static void safe_send(const char *s) {
+	if (!send_cb) return;
+	size_t l = strlen(s);
+	send_cb(s, l);
+}
+
+static void send_resp(const char *s) {
+
+	char tmp[128];
+	size_t l = strlen(s);
+
+	if (l + 3 < sizeof(tmp)) {
+		strcpy(tmp, s);
+		if (l < 2 || !(s[l-1] == '\n' && s[l-2] == '\r')) {
+		tmp[l] = '\r'; tmp[l+1] = '\n'; tmp[l+2] = '\0';
+	}
+		safe_send(tmp);
+	} else {
+		safe_send(s);
+		safe_send("\r\n");
+	}
+}
+
+static void reset_line(void) {
+	line_len = 0;
+	line_buf[0] = '\0';
+	timeout_acc = 0;
+	state = CMD_IDLE;
+}
+
+// --- Fragmentación de lógica ---
+static int isCommentStart(char c, char next) {
+	if (c == '#') return 1;
+	if (c == '/' && next == '/') return 1;
+	return 0;
+}
+
+static size_t tokenizeLine(char *line, char *tokens[], size_t max_tokens) {
+
+	size_t ntok = 0;
+	char *p = line;
+
+	while (*p && isspace((unsigned char)*p)) p++;
+		while (*p && ntok < max_tokens) {
+		tokens[ntok++] = p;
+		while (*p && !isspace((unsigned char)*p)) p++;
+		if (*p) {
+			*p = '\0';
+			p++;
+			while (*p && isspace((unsigned char)*p)) p++;
+		}
+	}
+	return ntok;
+}
+	static void normalizeCommand(char *cmd) {
+	for (char *q = cmd; *q; ++q)
+	*q = (char)toupper((unsigned char)*q);
+	}
+	static int parseCommand(char *tokens[], size_t ntok, cmd_action_t *act) {
+	memset(act, 0, sizeof(*act));
+	if (strcmp(tokens[0], "HELP") == 0) {
+	if (ntok != 1) return CMD_ERR_ARG;
+	act->type = ACT_HELP; return CMD_OK;
+	}
+	if (strcmp(tokens[0], "STATUS") == 0) {
+	if (ntok != 1) return CMD_ERR_ARG;
+	act->type = ACT_STATUS; return CMD_OK;
+	}
+	if (strcmp(tokens[0], "CLEAR") == 0) {
+	if (ntok != 1) return CMD_ERR_ARG;
+	act->type = ACT_CLEAR; return CMD_OK;
+	}
+	if (strcmp(tokens[0], "BAUD?") == 0) {
+	if (ntok != 1) return CMD_ERR_ARG;
+	act->type = ACT_BAUD_GET; return CMD_OK;
+	}
+	if (strncmp(tokens[0], "BAUD=", 5) == 0) {
+	const char *val = tokens[0] + 5;
+	if (strlen(val) == 0 && ntok >= 2) val = tokens[1];
+	char *endptr = NULL;
+	unsigned long b = strtoul(val, &endptr, 10);
+	if (endptr == val || *endptr != '\0') return CMD_ERR_ARG;

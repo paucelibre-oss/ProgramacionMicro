@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<section name="Workbench">
+	<item key="hasShownOverlayPopupBefore" value="true"/>
+	<item key="replaceBarOpen" value="true"/>
+	<list key="replacehistory">
+		<item value="uint8_t"/>
+		<item value="msg"/>
+		<item value="uartSendString((uint8_t*)(msj));"/>
+	</list>
+	<list key="searchhistory">
+		<item value="const char"/>
+		<item value="cmdTick"/>
+		<item value="line_buf[line_len++] = c;"/>
+		<item value="msj"/>
+		<item value="HAL_UART_Transmit(&amp;huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);"/>
+	</list>
+</section>

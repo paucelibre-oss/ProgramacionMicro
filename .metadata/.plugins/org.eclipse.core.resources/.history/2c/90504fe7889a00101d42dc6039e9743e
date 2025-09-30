@@ -1,0 +1,28 @@
+/*
+ * API_uart.h
+ *
+ *  Created on: Sep 25, 2025
+ *      Author: Paulo
+ */
+
+#ifndef API_INC_API_UART_H_
+#define API_INC_API_UART_H_
+
+#include <stdint.h> /*Libreria necesaria para reconocimiento de vatiables tipo UINT*/
+#include <stdbool.h>/*Libreria necesaria para reconocimiento de variables tipo boleanas*/
+#include <string.h>
+#include "stm32f4xx_hal.h"
+#include "usart.h"
+
+#define MAX_LEN_STRING
+
+typedef uint32_t tick_t;
+typedef bool bool_t;
+
+bool_t uartInit(void);
+void uartSendString(uint8_t * pstring);
+void uartSendStringSize(uint8_t * pstring, uint16_t size);
+void uartReceiveStringSize(uint8_t * pstring, uint16_t size);
+
+
+#endif /* API_INC_API_UART_H_ */

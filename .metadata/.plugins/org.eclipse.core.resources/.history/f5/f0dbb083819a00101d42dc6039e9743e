@@ -1,0 +1,12 @@
+/*
+ * API_debounce.c
+ *
+ *  Created on: Sep 25, 2025
+ *      Author: Paulo
+ */
+
+#include "API_debounce.h"
+
+static debounceState_t state = BUTTON_UP;
+static delay_t myDelay;
+static bool_t keyPressedFlag = false;

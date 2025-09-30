@@ -1,0 +1,279 @@
+/*
+ * API_cmdparser.c
+ *
+ *  Created on: Sep 27, 2025
+ *      Author: Paulo
+ */
+
+#include "API_cmdparser.h"
+#include <string.h>
+#include <ctype.h>
+#include <stdio.h>
+
+// Buffer de recepción
+static char line_buf[CMD_MAX_LINE];
+static size_t line_len = 0;
+static cmd_state_t state = CMD_IDLE;
+static uint32_t timeout_acc = 0; // acumulador para timeout
+
+// callbacks
+static void (*send_cb)(const char *buf, size_t len) = NULL;
+static void (*enqueue_cb)(const cmd_action_t *act) = NULL;
+
+// helpers
+static void safe_send(const char *s) {
+	if (!send_cb) return;
+	size_t l = strlen(s);
+	send_cb(s, l);
+}
+
+static void send_resp(const char *s) {
+	// ensure ending with \r\n
+	char tmp[128];
+	size_t l = strlen(s);
+
+	if (l + 3 < sizeof(tmp)) {
+		strcpy(tmp, s);
+		if (l < 2 || !(s[l-1] == '\n' && s[l-2] == '\r')) {
+			// append \r\n
+			if (l > 0 && s[l-1] == '\n') {
+				// only add \r before
+				tmp[l-1] = '\r';
+				tmp[l] = '\n';
+				tmp[l+1] = '\0';
+			} else if (l > 0 && s[l-1] == '\r') {
+				tmp[l] = '\n'; tmp[l+1] = '\0';
+			} else {
+				tmp[l] = '\r'; tmp[l+1] = '\n'; tmp[l+2] = '\0';
+			}
+		}
+		safe_send(tmp);
+	} else {
+		// fallback
+		safe_send(s);
+		safe_send("\r\n");
+	}
+}
+
+static void reset_line(void) {
+
+	line_len = 0;
+
+	if (line_buf) line_buf[0] = '\0';
+	timeout_acc = 0;
+	state = CMD_IDLE;
+}
+
+void cmdInit(
+	void (*send_cb_in)(const char *buf, size_t len),
+	void (*enqueue_cb_in)(const cmd_action_t *act)
+) {
+	send_cb = send_cb_in;
+	enqueue_cb = enqueue_cb_in;
+	reset_line();
+}
+
+void cmdReset(void) {
+	reset_line();
+}
+
+size_t cmdPollUart(const uint8_t *buf, size_t len) {
+
+	if (!buf || len == 0) return 0;
+	size_t consumed = 0;
+	size_t maxc = (len > CMD_POLL_MAX_BYTES) ? CMD_POLL_MAX_BYTES : len;
+
+	for (size_t i = 0; i < maxc; ++i) {
+	char c = (char)buf[i];
+	consumed++;
+	// State transitions
+	if (state == CMD_IDLE) {
+		// ignore leading CR/LF
+		if (c == '\r' || c == '\n') continue;
+		// start receiving
+		state = CMD_RECV;
+		line_len = 0;
+		timeout_acc = 0;
+	}
+	if (state == CMD_RECV) {
+	// handle comments: if first char is '#' we skip until terminator
+	if (line_len == 0 && (c == '#' )) {
+		// drop until newline or carriage
+		// consume chars until terminator but since we process only provided
+		bytes, we'll just ignore this char and enter a skip mode by setting a special
+		first char marker
+		line_buf[0] = '#'; line_len = 1; // marker - when we see terminator
+		we'll clear
+		continue;
+	}
+	// also support '//' comments: if first char '/' and next is '/' ->
+	skip
+	if (line_len == 0 && c == '/') {
+	// we need to peek next byte if available
+	if (i+1 < maxc && buf[i+1] == '/') {
+	// consume that next byte too
+	i++; consumed++;
+	// now skip until terminator; set marker
+	line_buf[0] = '/'; line_len = 1;
+	continue;
+	}
+	}
+	// if in skip-comment marker state (line_buf[0]=='#' or '/'), ignore
+	until newline
+	if (line_len == 1 && (line_buf[0] == '#' || line_buf[0] == '/')) {
+	if (c == '\n' || c == '\r') {
+	reset_line();
+	}
+	continue; // skip char
+	}
+	// normal accumulation
+	if (c == '\r' || c == '\n') {
+	// terminator -> parse
+	// ensure null-terminated
+	if (line_len >= CMD_MAX_LINE) {
+	// overflow (shouldn't happen because we check below)
+	state = CMD_ERROR;
+	send_resp("ERROR: line too long");
+	reset_line();
+	continue;
+	}
+	line_buf[line_len] = '\0';
+	state = CMD_PARSE;
+	} else {
+	// regular char
+	if (line_len + 1 >= CMD_MAX_LINE) {
+	// overflow
+	state = CMD_ERROR;
+	send_resp("ERROR: line too long");
+	reset_line();
+	continue;
+	}
+	// collapse multiple spaces/tabs? Keep raw for tokenization but allow
+	multiple spaces tolerated
+	line_buf[line_len++] = c;
+	// stay in CMD_RECV
+	}
+	}
+	if (state == CMD_PARSE) {
+	// tokenization
+	char *tokens[CMD_MAX_TOKENS];
+	size_t ntok = 0;
+	char *p = line_buf;
+	// skip leading spaces
+	while (*p && isspace((unsigned char)*p)) p++;
+	while (*p && ntok < CMD_MAX_TOKENS) {
+	// start of token
+	tokens[ntok++] = p;
+	// find next space
+	5
+	while (*p && !isspace((unsigned char)*p)) p++;
+	if (*p) {
+	*p = '\0';
+	p++;
+	while (*p && isspace((unsigned char)*p)) p++;
+	}
+	}
+	// if we still have non-space chars but exceeded token limit -> syntax
+	error
+	if (*p) {
+	send_resp("ERROR: bad args");
+	reset_line();
+	continue;
+	}
+	if (ntok == 0) {
+	// empty line -> ignore
+	reset_line();
+	continue;
+	}
+	// normalize command token to uppercase
+	for (char *q = tokens[0]; *q; ++q) *q = (char)toupper((unsigned
+	char)*q);
+	// Recognize commands
+	cmd_action_t act;
+	memset(&act, 0, sizeof(act));
+	int recognized = 0;
+	// HELP
+	if (strcmp(tokens[0], "HELP") == 0) {
+	if (ntok != 1) { send_resp("ERROR: bad args"); reset_line();
+	continue; }
+	act.type = ACT_HELP; recognized = 1;
+	}
+	// STATUS
+	else if (strcmp(tokens[0], "STATUS") == 0) {
+	if (ntok != 1) { send_resp("ERROR: bad args"); reset_line();
+	continue; }
+	act.type = ACT_STATUS; recognized = 1;
+	}
+	// CLEAR
+	else if (strcmp(tokens[0], "CLEAR") == 0) {
+	if (ntok != 1) { send_resp("ERROR: bad args"); reset_line();
+	continue; }
+	act.type = ACT_CLEAR; recognized = 1;
+	}
+	// BAUD? query
+	else if (strcmp(tokens[0], "BAUD?") == 0) {
+	6
+	if (ntok != 1) { send_resp("ERROR: bad args"); reset_line();
+	continue; }
+	act.type = ACT_BAUD_GET; recognized = 1;
+	}
+	// BAUD=<num> or BAUD=12345 (case-insensitive)
+	else if (strncmp(tokens[0], "BAUD=", 5) == 0) {
+	const char *val = tokens[0] + 5;
+	// allow form BAUD=nnn OR tokenized as BAUD= and arg
+	if (strlen(val) == 0 && ntok >= 2) val = tokens[1];
+	char *endptr = NULL;
+	unsigned long b = strtoul(val, &endptr, 10);
+	if (endptr == val || *endptr != '\0') { send_resp("ERROR: bad
+	args"); reset_line(); continue; }
+	if (b < 9600 || b > 921600) { send_resp("ERROR: bad args");
+	reset_line(); continue; }
+	act.type = ACT_BAUD_SET; act.args.baud_set.baud = (uint32_t)b;
+	recognized = 1;
+	}
+	// LED command with arg ON/OFF/TOGGLE
+	else if (strcmp(tokens[0], "LED") == 0) {
+	if (ntok != 2) { send_resp("ERROR: bad args"); reset_line();
+	continue; }
+	// normalize arg uppercase
+	for (char *q = tokens[1]; *q; ++q) *q = (char)toupper((unsigned
+	char)*q);
+	if (strcmp(tokens[1], "ON") == 0) {
+	act.type = ACT_LED; act.args.led.action = LED_ON; recognized = 1;
+	} else if (strcmp(tokens[1], "OFF") == 0) {
+	act.type = ACT_LED; act.args.led.action = LED_OFF; recognized = 1;
+	} else if (strcmp(tokens[1], "TOGGLE") == 0) {
+	act.type = ACT_LED; act.args.led.action = LED_TOGGLE; recognized =
+	1;
+	} else {
+	send_resp("ERROR: bad args"); reset_line(); continue;
+	}
+	}
+	if (!recognized) {
+	send_resp("ERROR: unknown command");
+	reset_line();
+	continue;
+	}
+	// If recognized, enqueue and respond OK (or specific reply)
+	if (enqueue_cb) {
+	enqueue_cb(&act);
+	}
+	send_resp("OK");
+	reset_line();
+	continue; // continue processing remaining input bytes
+	}
+	// CMD_ERROR state handled inline above; CMD_TIMEOUT_STATE will be
+	handled by cmdTick
+	}
+	return consumed;
+	}
+	void cmdTick(uint32_t elapsed_ms) {
+	// only meaningful in CMD_RECV
+	if (state != CMD_RECV) return;
+	timeout_acc += elapsed_ms;
+	if (timeout_acc >= T_LINE_TIMEOUT_MS) {
+	// abort
+	send_resp("ERROR: timeout");
+	reset_line();
+	}
+}

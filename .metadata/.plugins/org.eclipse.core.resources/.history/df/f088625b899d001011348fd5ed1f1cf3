@@ -1,0 +1,99 @@
+/*
+ * API_cmdparser.h
+ *
+ *  Created on: Sep 27, 2025
+ *      Author: Paulo
+ */
+
+#ifndef API_INC_API_CMDPARSER_H_
+#define API_INC_API_CMDPARSER_H_
+
+#include <stdint.h>
+#include <stddef.h>
+#include <stdlib.h>
+
+
+#define CMD_MAX_LINE 64 // bytes, includes terminator '\0'
+#define CMD_MAX_TOKENS 5 // COMANDO + hasta 4 args
+#define CMD_POLL_MAX_BYTES 16 // máximo bytes leídos por invocación
+#define T_LINE_TIMEOUT_MS 1000u // tiempo de timeout en ms
+
+
+typedef enum {
+CMD_OK = 0,
+CMD_ERR_TIMEOUT,
+CMD_ERR_OVERFLOW,
+CMD_ERR_SYNTAX,
+CMD_ERR_UNKNOWN,
+CMD_ERR_ARG
+} cmd_status_t;
+
+
+// MEF states (exposed for debug if needed)
+typedef enum {
+CMD_IDLE = 0,
+CMD_RECV,
+CMD_PARSE,
+CMD_EXEC,
+CMD_ERROR,
+CMD_TIMEOUT_STATE
+} cmd_state_t;
+
+
+// Actions encolables
+typedef enum {
+ACT_NONE = 0,
+ACT_HELP,
+ACT_LED,
+ACT_STATUS,
+ACT_BAUD_GET,
+ACT_BAUD_SET,
+ACT_CLEAR
+} cmd_action_type_t;
+
+
+typedef enum { LED_OFF = 0, LED_ON, LED_TOGGLE } led_action_t;
+
+
+typedef struct {
+cmd_action_type_t type;
+union {
+struct { led_action_t action; } led;
+struct { uint32_t baud; } baud_set;
+} args;
+} cmd_action_t;
+
+
+// Prototypes
+
+
+/**
+* Inicializa el parser.
+* @param send_cb función para enviar bytes/respuestas (se asegura que termine en \r\n si se desea)
+* @param enqueue_cb función para encolar acciones detectadas (se devolverá una copia de cmd_action_t)
+*/
+void cmdInit(void (*send_cb)(const char *buf, size_t len), void (*enqueue_cb)(const cmd_action_t *act));
+
+
+/**
+* Procesa hasta CMD_POLL_MAX_BYTES del búfer UART. No bloquea.
+* @param buf puntero a bytes recibidos
+* @param len longitud disponible (se procesan como máximo CMD_POLL_MAX_BYTES)
+* @return cantidad de bytes consumidos
+*/
+size_t cmdPollUart(const uint8_t *buf, size_t len);
+
+
+/**
+* Debe ser llamado periódicamente con el tiempo transcurrido en milisegundos
+* desde la última invocación para detectar timeout de línea.
+*/
+void cmdTick(uint32_t elapsed_ms);
+
+
+/**
+* Opcional: fuerza reset del estado interno y limpieza del buffer
+*/
+void cmdReset(void);
+
+#endif /* API_INC_API_CMDPARSER_H_ */

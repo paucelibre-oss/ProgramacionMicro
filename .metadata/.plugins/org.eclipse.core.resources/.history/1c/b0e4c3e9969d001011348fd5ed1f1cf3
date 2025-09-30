@@ -1,0 +1,255 @@
+/*
+ * API_cmdparser.c
+ *
+ *  Created on: Sep 27, 2025
+ *      Author: Paulo
+ */
+#include "API_cmdparser.h"
+
+static char line_buf[CMD_MAX_LINE];		/*Buffer where the incoming command is stored.*/
+static size_t line_len = 0;				/*Incoming command size.*/
+static cmd_state_t state = CMD_IDLE;	/*State of the MEF.*/
+static uint32_t timeout_acc = 0;		/*Timeout flag.*/
+
+/*----------------------- Callbacks ----------------------*/
+static void (*send_cb)(const char *buf, size_t len) = NULL; /*To make the code more flexible and be able to send information from the main with the desired peripheral.*/
+static void (*enqueue_cb)(const cmd_action_t *act) = NULL; 	/*To queue the actions required for each command*/
+
+static void safe_send(const char *s) {
+	if (!send_cb) return;
+	size_t l = strlen(s);
+	send_cb(s, l);
+}
+
+/*
+ * @brief send_response: Helper function to send text responses via safe_send, ensuring that they always end in \r\n
+ * @param const char*: The String to send.
+ * @return None
+ * */
+static void send_resp(const char *s) {
+
+	char tmp[128];
+	size_t l = strlen(s);
+
+	if (l + 3 < sizeof(tmp)) {
+		strcpy(tmp, s);
+		if (l < 2 || !(s[l-1] == '\n' && s[l-2] == '\r')) {
+		tmp[l] = '\r'; tmp[l+1] = '\n'; tmp[l+2] = '\0';
+	}
+		safe_send(tmp);
+	} else {
+		safe_send(s);
+		safe_send("\r\n");
+	}
+}
+/*
+ * @brief reset_line: Write the initial parameters of the MEF
+ * @return None
+ * */
+static void reset_line(void) {
+	line_len = 0;
+	line_buf[0] = '\0';
+	timeout_acc = 0;
+	state = CMD_IDLE;
+}
+/*
+ * @brief isCommentStart: Check if the incoming line is a comment.
+ * @return int: returns 1 if the line should be ignored. Else return 0
+ */
+static int isCommentStart(char c, char next) {
+	if (c == '#') return 1;
+	if (c == '/' && next == '/') return 1;
+	return 0;
+}
+/*
+ *@brief tokenizeLine: Converts a line of text into a set of words separated by spaces/tabs, and returns them as an array of strings without using extra memory (modifies the original string by inserting \0).
+ *@param char* line: String to process (will be modified).
+ *@param char* tokens[]: Array of pointers where the beginning of each token is stored.
+ *@param size_t max_tokens: Maximum number of tokens to extract.
+ *@return ntok: Number of tokens found.
+ */
+static size_t tokenizeLine(char *line, char *tokens[], size_t max_tokens) {
+
+	size_t ntok = 0;
+	char *p = line;
+
+	while (*p && isspace((unsigned char)*p)) p++;
+		while (*p && ntok < max_tokens) {
+		tokens[ntok++] = p;
+		while (*p && !isspace((unsigned char)*p)) p++;
+		if (*p) {
+			*p = '\0';
+			p++;
+			while (*p && isspace((unsigned char)*p)) p++;
+		}
+	}
+	return ntok;
+}
+/*
+ * @brief void normalizeCommand: Converts the entire command to uppercase so that the parser can work case-insensitively.
+ * @param char* cmd: A pointer to String line.
+ * @return: None
+ * */
+static void normalizeCommand(char *cmd) {
+
+	for (char *q = cmd; *q; ++q)
+	*q = (char)toupper((unsigned char)*q);
+
+}
+
+/*
+ * @brief parseCommand: Takes the tokens extracted from a received line and decides what command it is, whether the syntax is valid, and what action (cmd_action_t) should be executed.
+ * @param char* tokens[]: Array of pointers where the beginning of each token is stored.
+ * @param size_t ntok: Number of tokens found.
+ * @param cmd_action_t *act: Actions encolables.
+ * @return cmd_status_t: Actions encolable value.
+ * */
+static cmd_status_t parseCommand(char *tokens[], size_t ntok, cmd_action_t *act) {
+
+	memset(act, 0, sizeof(*act));
+
+	if (strcmp(tokens[0], "HELP") == 0) {
+		if (ntok != 1) return CMD_ERR_ARG;
+		act->type = ACT_HELP; return CMD_OK;
+	}
+	if (strcmp(tokens[0], "STATUS") == 0) {
+		if (ntok != 1) return CMD_ERR_ARG;
+		act->type = ACT_STATUS; return CMD_OK;
+	}
+	if (strcmp(tokens[0], "CLEAR") == 0) {
+		if (ntok != 1) return CMD_ERR_ARG;
+		act->type = ACT_CLEAR; return CMD_OK;
+	}
+	if (strcmp(tokens[0], "BAUD?") == 0) {
+		if (ntok != 1) return CMD_ERR_ARG;
+		act->type = ACT_BAUD_GET; return CMD_OK;
+	}
+	if (strncmp(tokens[0], "BAUD=", 5) == 0) {
+
+		const char *val = tokens[0] + 5;
+		if (strlen(val) == 0 && ntok >= 2) val = tokens[1];
+		char *endptr = NULL;
+		unsigned long b = strtoul(val, &endptr, 10);
+
+		if (endptr == val || *endptr != '\0') return CMD_ERR_ARG;
+		if (b < 9600 || b > 921600) return CMD_ERR_ARG;
+		act->type = ACT_BAUD_SET; act->args.baud_set.baud = (uint32_t)b;
+		return	CMD_OK;
+	}
+	if (strcmp(tokens[0], "LED") == 0) {
+		if (ntok != 2) return CMD_ERR_ARG;
+		normalizeCommand(tokens[1]);
+		act->type = ACT_LED;
+		if (strcmp(tokens[1], "ON") == 0) act->args.led.action = LED_ON;
+		else if (strcmp(tokens[1], "OFF") == 0) act->args.led.action = LED_OFF;
+		else if (strcmp(tokens[1], "TOGGLE") == 0) act->args.led.action =
+		LED_TOGGLE;
+		else return CMD_ERR_ARG;
+		return CMD_OK;
+	}
+	return CMD_ERR_UNKNOWN;
+}
+
+/*
+ *@brief execCommand: Send the command to be executed to the callback.
+ *@param const cmd_action_t *act: a pointer to the action queue to be excecuted.
+ *@return None.
+ * */
+static void execCommand(const cmd_action_t *act) {
+	if (enqueue_cb) enqueue_cb(act);
+	send_resp("OK");
+}
+/*
+ * @brief handleReceivedChar: Is the full-line handler in the command parser:
+		  - Takes the received text (line_buf).
+		  - Separates it into tokens.
+		  - Validates that something is present.
+		  - Converts the command to uppercase.
+		  - Interprets and translates the command (parseCommand).
+		  - Executes the action or returns an error message.
+		  - Resets the buffer for the next line.
+ * @param None.
+ * @return None.
+ * */
+static void handleLine(void) {
+
+	char *tokens[CMD_MAX_TOKENS];
+	size_t ntok = tokenizeLine(line_buf, tokens, CMD_MAX_TOKENS);
+
+	if(ntok == 0){
+		reset_line();
+		return;
+	}
+
+	normalizeCommand(tokens[0]);
+
+	cmd_action_t act;
+	int res = parseCommand(tokens, ntok, &act);
+
+	if (res == CMD_OK) {
+		execCommand(&act);
+	} else if (res == CMD_ERR_ARG) {
+		send_resp("ERROR: bad args");
+	} else if (res == CMD_ERR_UNKNOWN) {
+		send_resp("ERROR: unknown command");
+	}
+
+	reset_line();
+}
+
+static void handleReceivedChar(char c) {
+
+	if (state == CMD_IDLE) {
+		if (c == '\r' || c == '\n') return;
+		state = CMD_RECV;
+		line_len = 0;
+		timeout_acc = 0;
+	}
+
+	if (state == CMD_RECV) {
+		// comentario
+		if (line_len == 0 && isCommentStart(c, 0)) {
+			state = CMD_IDLE; return;
+		}
+		if (c == '\r' || c == '\n') {
+			line_buf[line_len] = '\0';
+			state = CMD_PARSE;
+			handleLine();
+			return;
+		}
+		if (line_len + 1 >= CMD_MAX_LINE) {
+			send_resp("ERROR: line too long");
+			reset_line();
+			return;
+		}
+			line_buf[line_len++] = c;
+	}
+}
+
+// --- API pública ---
+void cmdInit(
+	void (*send_cb_in)(const char *buf, size_t len),
+	void (*enqueue_cb_in)(const cmd_action_t *act)
+) {
+	send_cb = send_cb_in;
+	enqueue_cb = enqueue_cb_in;
+	reset_line();
+}
+
+void cmdReset(void){
+	reset_line();
+}
+
+size_t cmdPollUart(const uint8_t *buf, size_t len){
+
+	if (!buf || len == 0) return 0;
+	size_t consumed = 0;
+	size_t maxc = (len > CMD_POLL_MAX_BYTES) ? CMD_POLL_MAX_BYTES : len;
+
+	for (size_t i = 0; i < maxc; ++i) {
+		handleReceivedChar((char)buf[i]);
+		consumed++;
+	}
+	return consumed;
+}
+
