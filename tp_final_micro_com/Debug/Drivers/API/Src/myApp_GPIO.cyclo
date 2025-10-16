@@ -1,0 +1,6 @@
+../Drivers/API/Src/myApp_GPIO.c:11:6:gpioInit	1
+../Drivers/API/Src/myApp_GPIO.c:15:6:nfcSS	1
+../Drivers/API/Src/myApp_GPIO.c:21:6:nfcRST	1
+../Drivers/API/Src/myApp_GPIO.c:27:13:actionPin	3
+../Drivers/API/Src/myApp_GPIO.c:45:6:ledOff	1
+../Drivers/API/Src/myApp_GPIO.c:49:6:ledToggleNonBlocking	2

@@ -1,0 +1,69 @@
+/*
+ * myApp_MCP960X.c
+ *
+ *  Created on: Oct 8, 2025
+ *      Author: Paulo
+ */
+#include <myApp_MCP960X.h>
+
+static HAL_StatusTypeDef mcp960xGetVersion(uint16_t devAddr, uint8_t* rxBuffer);
+static HAL_StatusTypeDef mcp960xConfFilter(uint16_t devAddr, uint8_t thermoType, uint8_t filterOrder);
+static HAL_StatusTypeDef mcp960xDevConfRegister(uint8_t devAddr, uint8_t coldResol, uint8_t adcResol, uint8_t burstSample, uint8_t shutDMode);
+
+HAL_StatusTypeDef mcp960xInit(uint16_t devAddr){
+
+	uint8_t rxBuffer = 0;
+
+	/*Prueba*/
+	char buff[80] = {0};
+
+	if(I2C_Init() != HAL_OK) return HAL_ERROR;
+
+	if(mcp960xGetVersion(devAddr, &rxBuffer) != HAL_OK) return HAL_ERROR;
+	uartSendString((uint8_t*)("\r\n[mcp960xInit] Pasó mcp960xGetVersion."));
+	snprintf(buff, 80, " Version: 0x%X", rxBuffer);
+	uartSendString((uint8_t*)(buff));
+	if(rxBuffer != VERSION_MCP9601 && rxBuffer != VERSION_MCP9600) return HAL_ERROR;
+	uartSendString((uint8_t*)("\r\n[mcp960xInit] Pasó VERSION_MCP9601."));
+//	if(mcp960xConfFilter(devAddr, Type_K, filter_IIR4) != HAL_OK) return HAL_ERROR;
+//	uartSendString((uint8_t*)("\r\n[mcp960xInit] Pasó mcp960xConfFilter."));
+//	if(mcp960xDevConfRegister(devAddr, cold_0_0625, MCP960X_ADCRESOLUTION_18, burst_samples_1, Normal_operation) != HAL_OK)  return HAL_ERROR;
+//	uartSendString((uint8_t*)("\r\n[mcp960xInit] Pasó mcp960xConfFilter."));
+	return HAL_OK;
+}
+
+static HAL_StatusTypeDef mcp960xGetVersion(
+	uint16_t devAddr,
+	uint8_t* rxBuffer
+){
+	return readRegisterI2C(devAddr, Device_IDRevision_register, rxBuffer, (uint16_t)(1));
+}
+
+static HAL_StatusTypeDef mcp960xConfFilter(
+	uint16_t devAddr,
+	uint8_t thermoType,
+	uint8_t filterOrder
+){
+	uint8_t dataRegister = (thermoType << 4) | filterOrder;
+	return writeRegisterI2C(devAddr, Thermocouple_Sensor_Configuration_register, &dataRegister, (uint16_t)(1));
+}
+
+static HAL_StatusTypeDef mcp960xDevConfRegister(
+	uint8_t devAddr,
+	uint8_t coldResol,
+	uint8_t adcResol,
+	uint8_t burstSample,
+	uint8_t shutDMode
+){
+	uint8_t regConfig = (coldResol << 0x07) | (adcResol << 0x05) | (burstSample << 0x02) | shutDMode;
+	return writeRegisterI2C(devAddr, Device_Configuration_register, &regConfig, (uint16_t)(1));
+}
+
+HAL_StatusTypeDef mcp960xReadTemperature(
+	uint16_t devAddr,
+	uint8_t* rxBuffer,
+	uint16_t rxLength
+){
+	return readRegisterI2C(devAddr, Thermocouple_Hot_Junction_THOTR, rxBuffer, rxLength);
+}
+

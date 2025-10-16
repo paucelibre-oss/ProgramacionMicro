@@ -1,0 +1,47 @@
+/*
+ * myApp_MCP960X.c
+ *
+ *  Created on: Oct 8, 2025
+ *      Author: Paulo
+ */
+#include <myApp_MCP960X.h>
+
+HAL_StatusTypeDef mcp960xInit(void){
+	return I2C_Init();
+}
+
+HAL_StatusTypeDef mcp960xGetVersion(
+	uint16_t devAddr,
+	uint8_t* rxBuffer
+){
+	return readRegisterI2C(devAddr, Device_IDRevision_register, rxBuffer, (uint16_t)(1));
+}
+
+HAL_StatusTypeDef mcp960xConfFilter(
+	uint16_t devAddr,
+	uint8_t thermoType,
+	uint8_t filterOrder
+){
+	uint8_t dataRegister = (thermoType << 4) | filterOrder;
+	return writeRegisterI2C(devAddr, Thermocouple_Sensor_Configuration_register, &dataRegister, (uint16_t)(1));
+}
+
+HAL_StatusTypeDef mcp960xDevConfRegister(
+	uint8_t devAddr,
+	uint8_t coldResol,
+	uint8_t adcResol,
+	uint8_t burstSample,
+	uint8_t shutDMode
+){
+	uint8_t regConfig = (coldResol << 0x07) | (adcResol << 0x05) | (burstSample << 0x02) | shutDMode;
+	return writeRegisterI2C(devAddr, Device_Configuration_register, &regConfig, (uint16_t)(1));
+}
+
+HAL_StatusTypeDef mcp960xReadTemperature(
+	uint16_t devAddr,
+	uint8_t* rxBuffer,
+	uint16_t rxLength
+){
+	return readRegisterI2C(devAddr, Thermocouple_Hot_Junction_THOTR, rxBuffer, rxLength)
+}
+

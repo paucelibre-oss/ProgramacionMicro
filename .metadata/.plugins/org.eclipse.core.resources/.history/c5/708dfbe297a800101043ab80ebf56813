@@ -1,0 +1,249 @@
+/*
+ * PN532.c
+ *
+ *  Created on: Oct 11, 2025
+ *      Author: Paulo
+ */
+#include "PN532.h"
+
+#include "pn532.h"
+#include <string.h>
+
+// Constantes del protocolo
+#define PREAMBLE    0x00
+#define STARTCODE1  0x00
+#define STARTCODE2  0xFF
+#define HOST_TO_PN532  0xD4
+#define PN532_TO_HOST  0xD5
+#define PN532_COMMAND_GETFIRMWAREVERSION    (0x02)
+
+// SPI commands
+#define PN532_SPI_DATAWRITE  0x01
+#define PN532_SPI_STATUSREAD 0x02
+#define PN532_SPI_DATAREAD   0x03
+//
+//// si no exportaste externs en otro lado, definelos aquí (cambiar según tu proyecto)
+//#ifndef PN532_CS_GPIO_Port
+//// extern GPIO_TypeDef* PN532_CS_GPIO_Port; extern uint16_t PN532_CS_Pin;
+//// Si querés, definelos aquí: e.g.
+//// #define PN532_CS_GPIO_Port GPIOA
+//// #define PN532_CS_Pin       GPIO_PIN_4
+//#endif
+
+// Prototipos privados
+//static void cs_select(void);
+//static void cs_deselect(void);
+static PN532status spi_write_bytes(const uint8_t *data, uint16_t len);
+static PN532status spi_transfer(const uint8_t *tx, uint8_t *rx, uint16_t len);
+static PN532status pn532_write_command(const uint8_t *cmd, uint8_t cmd_len);
+static PN532status pn532_read_response(uint8_t *buffer, uint8_t *len, uint32_t timeout_ms);
+
+
+
+// helpers
+static uint8_t checksum(uint8_t *buf, uint8_t len) {
+    uint8_t sum = 0;
+    for (uint8_t i = 0; i < len; i++) sum += buf[i];
+    return (uint8_t)(~sum + 1); // DCS = 0x100 - sum
+}
+
+static PN532status spi_write_bytes(const uint8_t *data, uint16_t len) {
+
+    if (writeRegisterSPI((uint8_t*)data, len, PN532_SPI_TIMEOUT_MS) == HAL_OK) return PN532_OK;
+    return PN532_ERR_IO;
+}
+
+static PN532status spi_transfer(const uint8_t *tx, uint8_t *rx, uint16_t len) {
+
+    if (writeReadRegisterSPI((uint8_t*)tx, rx, len, PN532_SPI_TIMEOUT_MS) == HAL_OK) return PN532_OK;
+    return PN532_ERR_IO;
+}
+
+// escribe un comando (arma frame y lo envía por SPI)
+static PN532status pn532_write_command(const uint8_t *cmd, uint8_t cmd_len) {
+    // arma buffer de datos: TFI + DATA
+    uint8_t data[64];
+    if (cmd_len + 1 > sizeof(data)) return PN532_ERR_FRAME;
+    data[0] = HOST_TO_PN532;
+    memcpy(&data[1], cmd, cmd_len);
+    uint8_t len = (uint8_t)(cmd_len + 1);
+    uint8_t lcs = (uint8_t)(0x100 - len);
+
+    // frame completo a enviar (sin el byte SPI_WRITE que se añade antes)
+    uint8_t frame[80];
+    uint8_t idx = 0;
+    frame[idx++] = PREAMBLE;
+    frame[idx++] = STARTCODE1;
+    frame[idx++] = STARTCODE2;
+    frame[idx++] = len;
+    frame[idx++] = lcs;
+    memcpy(&frame[idx], data, len); idx += len;
+    uint8_t dcs = checksum((uint8_t*)data, len);
+    frame[idx++] = dcs;
+    frame[idx++] = 0x00; // postamble
+
+    // envia por SPI: primero CS low, luego 0x01, luego frame
+    nfcSS(TURN_OFF);
+    uint8_t cmd_write = PN532_SPI_DATAWRITE;
+    if (spi_write_bytes(&cmd_write, 1) != PN532_OK) { nfcSS(TURN_ON); return PN532_ERR_IO; }
+    if (spi_write_bytes(frame, idx) != PN532_OK) { nfcSS(TURN_ON); return PN532_ERR_IO; }
+    nfcSS(TURN_ON);
+    return PN532_OK;
+}
+
+// lee respuesta de PN532: primero poll a status y luego read data
+static PN532status pn532_read_response(uint8_t *buffer, uint8_t *len_out, uint32_t timeout_ms) {
+
+	uint32_t tickstart = HAL_GetTick();
+    uint8_t status = 0;
+
+    // polling status (0x02) hasta que bit0=1 o timeout
+    do {
+        nfcSS(TURN_OFF);
+        uint8_t cmd = PN532_SPI_STATUSREAD;
+        uint8_t resp = 0x00;
+        if (spi_transfer(&cmd, &resp, 1) != PN532_OK) { nfcSS(TURN_ON); return PN532_ERR_IO; }
+        nfcSS(TURN_ON);
+        status = resp;
+        if (status & 0x01) break;
+        HAL_Delay(PN532_POLL_MS);
+    } while ((HAL_GetTick() - tickstart) < timeout_ms);
+
+    if (!(status & 0x01)) return PN532_ERR_TIMEOUT;
+
+    // Cuando está listo, hacemos DATAREAD (0x03) y leemos header para saber la longitud
+    nfcSS(TURN_OFF);
+    uint8_t cmd_read = PN532_SPI_DATAREAD;
+    if (spi_write_bytes(&cmd_read, 1) != PN532_OK) { nfcSS(TURN_ON); return PN532_ERR_IO; }
+
+    // Leer los primeros 6 bytes: PREAMBLE, START1, START2, LEN, LCS, TFI
+    uint8_t header[6] = {0};
+    // Para leer, enviamos 0x00 y recibimos
+    for (int i = 0; i < 6; i++) {
+        uint8_t tx = 0x00;
+        uint8_t rx = 0x00;
+        if (spi_transfer(&tx, &rx, 1) != PN532_OK) { nfcSS(TURN_ON); return PN532_ERR_IO; }
+        header[i] = rx;
+    }
+
+    // Verificaciones mínimas
+    if (header[0] != PREAMBLE || header[1] != STARTCODE1 || header[2] != STARTCODE2) {
+        nfcSS(TURN_ON);
+        return PN532_ERR_FRAME;
+    }
+
+    uint8_t len = header[3];
+    uint8_t lcs = header[4];
+    if ((uint8_t)(len + lcs) != 0x00) { nfcSS(TURN_ON); return PN532_ERR_FRAME; }
+
+    // ahora leemos TFI (ya leído en header[5]) y los (len-1) bytes de payload, luego DCS y postamble
+    uint8_t tfi = header[5];
+    uint8_t payload_len = len - 1; // porque tfi consume 1
+    if (payload_len + 2 > 64) { nfcSS(TURN_ON); return PN532_ERR_FRAME; } // espacio insuf
+    uint8_t payload[64];
+    for (uint8_t i = 0; i < payload_len; i++) {
+        uint8_t tx = 0x00, rx = 0x00;
+        if (spi_transfer(&tx, &rx, 1) != PN532_OK) { nfcSS(TURN_ON); return PN532_ERR_IO; }
+        payload[i] = rx;
+    }
+    // DCS
+    uint8_t dcs = 0x00;
+    { uint8_t tx = 0x00, rx = 0x00; if (spi_transfer(&tx, &rx, 1) != PN532_OK) { nfcSS(TURN_ON); return PN532_ERR_IO; } dcs = rx; }
+    // postamble
+    { uint8_t tx = 0x00, rx = 0x00; if (spi_transfer(&tx, &rx, 1) != PN532_OK) { nfcSS(TURN_ON); return PN532_ERR_IO; } (void)rx; }
+
+    nfcSS(TURN_ON);
+
+    // Verificación checksum
+    uint8_t sum = tfi;
+    for (uint8_t i = 0; i < payload_len; i++) sum += payload[i];
+    uint8_t calc_dcs = (uint8_t)(~sum + 1);
+    if (calc_dcs != dcs) return PN532_ERR_FRAME;
+
+    // Copiamos resultado: tfi debe ser PN532_TO_HOST (0xD5)
+    if (tfi != PN532_TO_HOST) return PN532_ERR_FRAME;
+
+    // Copiamos payload a buffer
+    if (len_out) *len_out = payload_len;
+    if (buffer && payload_len) memcpy(buffer, payload, payload_len);
+
+    return PN532_OK;
+}
+
+// API pública -----------------------------------------------------
+
+PN532status PN532_PowerUpInit(void) {
+
+	nfcSS(TURN_ON);
+
+    if(SPI_Init() != HAL_OK) return PN532_ERR_NO_INITSPI;
+
+    return PN532_OK;
+}
+
+PN532status PN532_GetFirmwareVersion(uint8_t *ic, uint8_t *ver, uint8_t *rev, uint8_t *support) {
+
+	uint8_t cmd = PN532_COMMAND_GETFIRMWAREVERSION; // GetFirmwareVersion
+    if (pn532_write_command(&cmd, 1) != PN532_OK) return PN532_ERR_IO;
+
+    uint8_t resp[32]; uint8_t len = 0;
+    int r = pn532_read_response(resp, &len, PN532_CMD_RESPONSE_MS);
+    if (r != PN532_OK) return r;
+
+    // Esperamos payload: [0]=CMD_RESP (0x00?), pero según docs GetFirmwareVersion reply payload es:
+    // payload[0] = Command code response (0x02?) In many libs payload[0] == 0x00 (ACK differences)
+    // Observamos los bytes: usually payload[0] = 0x02? pero más confiable es buscar el pattern.
+    // En práctica: payload[0] = 0x02? librerías usan resp[0..3] = IC,Ver,Rev,Support si se lee correctamente desde index 0.
+    if (len < 4) return PN532_ERR_FRAME;
+    if (ic) *ic = resp[0];
+    if (ver) *ver = resp[1];
+    if (rev) *rev = resp[2];
+    if (support) *support = resp[3];
+    return PN532_OK;
+}
+
+/*
+ ReadPassiveTarget (ISO14443A):
+ - Envía InListPassiveTarget (0x4A) con maxTargets=1, baudrate=0x00 (106 kbps)
+ - Espera respuesta; si hay tarjeta devuelve UID y longitud
+*/
+PN532status PN532_ReadPassiveTarget(uint8_t *uid, uint8_t *uid_len, uint32_t timeout_ms) {
+
+//	uint8_t cmd[2];
+//    cmd[0] = 0x4A; // InListPassiveTarget
+//    cmd[1] = 0x01; // max 1 target
+    // payload usual adicional: baudrate 0x00
+    // Sin embargo algunos firmwares esperan 3 bytes: 0x4A 0x01 0x00
+    uint8_t full_cmd[3] = { 0x4A, 0x01, 0x00 };
+
+    if (pn532_write_command(full_cmd, 3) != PN532_OK) return PN532_ERR_IO;
+
+    uint8_t resp[64]; uint8_t plen = 0;
+    int r = pn532_read_response(resp, &plen, timeout_ms ? timeout_ms : PN532_CMD_RESPONSE_MS);
+    if (r != PN532_OK) return r;
+
+    // Interpretación de respuesta:
+    // payload típico para InListPassiveTarget:
+    // byte0 = command response code (0x4B)
+    // byte1 = number of targets (1)
+    // byte2 = target data length?
+    // luego: uid length and uid...
+    // Muchos drivers: response[0] == 0x4B, response[5] = UID length, response[6..] = UID
+    if (plen < 7) return PN532_ERR_FRAME;
+    if (resp[0] != 0x4B) return PN532_ERR_NO_TAG;
+
+    uint8_t targets = resp[1];
+    if (targets == 0) return PN532_ERR_NO_TAG;
+
+    // localizar UID: la estructura varía levemente, pero comúnmente:
+    // resp[5] = UID length, resp[6..6+uid_len-1] = UID
+    uint8_t offset_uid_len = 5;
+    if (offset_uid_len >= plen) return PN532_ERR_FRAME;
+    uint8_t ulen = resp[offset_uid_len];
+    if (ulen == 0 || (offset_uid_len + 1 + ulen) > plen) return PN532_ERR_FRAME;
+    if (uid && uid_len) {
+        *uid_len = ulen;
+        memcpy(uid, &resp[offset_uid_len + 1], ulen);
+    }
+    return PN532_OK;
+}

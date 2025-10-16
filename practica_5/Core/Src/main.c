@@ -62,7 +62,7 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
-
+	uint8_t pstring[256] = {0};
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -95,6 +95,10 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
+	  uartReceiveStringSize(pstring, (size_t)(6));
+	  if(pstring[0] != 0) uartSendStringSize(pstring, (size_t)(6));
+	  HAL_Delay(1000);
+
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */

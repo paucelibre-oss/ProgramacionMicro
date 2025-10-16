@@ -1,0 +1,37 @@
+/*
+ * i2c.h
+ *
+ *  Created on: Oct 8, 2025
+ *      Author: Paulo
+ */
+
+#ifndef INC_I2C_H_
+#define INC_I2C_H_
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* Includes ------------------------------------------------------------------*/
+#include "stm32f4xx_hal.h"
+#include <stdbool.h>
+#include <stdint.h>
+
+#define I2C_ADDR_7BITS_TO_HAL(a) ((uint16_t)((a) << 1))
+
+extern I2C_HandleTypeDef hi2c1;
+
+void clearFlagTxI2C(void);
+void clearFlagRxI2C(void);
+bool getRxFlagStatusI2C(void);
+bool getTxFlagStatusI2C(void);
+
+HAL_StatusTypeDef I2C_Init(void);
+HAL_StatusTypeDef readRegisterI2C_IT(uint8_t dev7bit, uint8_t regAddr, uint8_t* rxBuffer, uint16_t rxLength);
+HAL_StatusTypeDef writeRegisterI2C_IT(uint8_t dev7bit, uint8_t regAddr, uint8_t* data, uint16_t lenData);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* INC_I2C_H_ */

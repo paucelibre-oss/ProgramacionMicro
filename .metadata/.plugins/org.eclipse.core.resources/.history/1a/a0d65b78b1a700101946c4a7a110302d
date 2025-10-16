@@ -1,0 +1,89 @@
+/*
+ * myApp_mef.c
+ *
+ *  Created on: Oct 12, 2025
+ *      Author: Paulo
+ */
+#include "myApp_mef.h"
+
+#define SIZE_TEMP_REGISTER  		2
+#define SIZE_BUFFER_MESSAGE_ERROR 	100
+
+static bool cmdUmbral 	= false;
+static bool cmdStatus 	= false;
+static bool cmdRST 		= false;
+static bool nfcUID		= false;
+static bool measureOk 	= false;
+static float umbralTemp	= 0;
+static float temperature = 0;
+static messageError[SIZE_BUFFER_MESSAGE_ERROR];
+
+static void readTemperature();
+
+_mefStates updateState(_mefStates actState){
+
+	_mefStates newState;
+
+	switch(actState){
+		case MEF_STATE_REQUEST_THRESHOLD_UART:
+			if(cmdUmbral) newState = MEF_STATE_MEASURE_TEMPERATURE_LISTEN_UART;
+			else newState = MEF_STATE_MEASURE_TEMPERATURE_LISTEN_UART;
+			break;
+		case MEF_STATE_MEASURE_TEMPERATURE_LISTEN_UART:
+			if(cmdUmbral) newState = MEF_STATE_REWRITE_THRESHOLD_TEMPERATURE;
+			else if(measureOk) newState = MEF_STATE_SAVE_MEDITION;
+			else newState = MEF_STATE_MEASURE_TEMPERATURE_LISTEN_UART;
+			break;
+		case MEF_STATE_SAVE_MEDITION:
+			if(temperature > umbralTemp) newState = MEF_STATE_ALARM;
+			else if(cmdStatus) newState = MEF_STATE_PRINT_TEMPERATURE;
+			else newState = MEF_STATE_MEASURE_TEMPERATURE_LISTEN_UART;
+			break;
+		case MEF_STATE_ALARM:
+			if(cmdRST) newState = MEF_STATE_NOTIFY_RESET;
+			else if(nfcUID) newState = MEF_STATE_NOTIFY_RESET;
+			else newState = MEF_STATE_ALARM;
+			break;
+		case MEF_STATE_PRINT_TEMPERATURE:
+		case MEF_STATE_NOTIFY_RESET:
+		case MEF_STATE_REWRITE_THRESHOLD_TEMPERATURE:
+			newState = MEF_STATE_MEASURE_TEMPERATURE_LISTEN_UART;
+			break;
+		default:
+			newState = MEF_STATE_REQUEST_THRESHOLD_UART;
+			break;
+	}
+
+	return newState;
+}
+
+static void readTemperature(){
+
+	uint16_t devAddr = MCP960X_ID_67;
+	uint8_t rxBuffer[SIZE_TEMP_REGISTER];
+
+	memset(rxBuffer, 0x00, sizeof(rxBuffer));
+
+	if(mcp960xReadTemperature(devAddr, rxBuffer, (uint16_t)(sizeof(rxBuffer))) != HAL_OK){
+		measureOk = false;
+		memset(messageError, 0x00, sizeof(messageError));
+		return;
+	}else{
+
+	}
+
+}
+
+static void calculateTemperature(uint8_t *rxBuffer){
+	if(sizeof(rxBuffer) != SIZE_TEMP_REGISTER){
+		return;
+	}
+
+//	float Temperature = 0.0f;
+//
+//	if((TempUpperByte & 0x80) == 0x80){										/*When the temperature is lower than 0°*/
+//		Temperature = (float)((TempUpperByte * 16.0f) + (TempLowerByte / 16.0f) - 4096.0f);
+//	}else{																	/*Otherwise if the temperature is greater than 0°*/
+//		Temperature = (float)((TempUpperByte * 16.0f) + (TempLowerByte / 16.0f));
+//	}
+}

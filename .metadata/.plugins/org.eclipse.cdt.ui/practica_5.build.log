@@ -1,10 +1,24 @@
-23:34:36 **** Incremental Build of configuration Debug for project practica_5 ****
+20:20:58 **** Incremental Build of configuration Debug for project practica_5 ****
 make -j8 all 
-arm-none-eabi-size  practica_5.elf 
-   text	   data	    bss	    dec	    hex	filename
-  14416	     92	   2060	  16568	   40b8	practica_5.elf
-Finished building: default.size.stdout
- 
+arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F446xx -c -I../Core/Inc -IC:/Users/Paulo/STM32Cube/Repository/STM32Cube_FW_F4_V1.28.3/Drivers/STM32F4xx_HAL_Driver/Inc -IC:/Users/Paulo/STM32Cube/Repository/STM32Cube_FW_F4_V1.28.3/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -IC:/Users/Paulo/STM32Cube/Repository/STM32Cube_FW_F4_V1.28.3/Drivers/CMSIS/Device/ST/STM32F4xx/Include -IC:/Users/Paulo/STM32Cube/Repository/STM32Cube_FW_F4_V1.28.3/Drivers/CMSIS/Include -I../Drivers/API/Inc -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/main.o"
+../Core/Src/main.c: In function 'main':
+../Core/Src/main.c:87:6: warning: implicit declaration of function 'uartInit'; did you mean 'UART_Init'? [-Wimplicit-function-declaration]
+   87 |   if(uartInit()) uartSendString((uint8_t*)      ("---- Successful UART configuration ----\r\n\r\n"));
+      |      ^~~~~~~~
+      |      UART_Init
+../Core/Src/main.c:87:18: warning: implicit declaration of function 'uartSendString' [-Wimplicit-function-declaration]
+   87 |   if(uartInit()) uartSendString((uint8_t*)      ("---- Successful UART configuration ----\r\n\r\n"));
+      |                  ^~~~~~~~~~~~~~
+../Core/Src/main.c:65:17: warning: unused variable 'pstring' [-Wunused-variable]
+   65 |         uint8_t pstring[256] = {0};
+      |                 ^~~~~~~
+arm-none-eabi-gcc -o "practica_5.elf" @"objects.list"   -mcpu=cortex-m4 -T"D:\CESE_25_Embebidos\practica_5\STM32F446RETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="practica_5.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+C:/ST/STM32CubeIDE_1.19.0/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.13.3.rel1.win32_1.0.0.202411081344/tools/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/bin/ld.exe: ./Core/Src/main.o: in function `main':
+D:/CESE_25_Embebidos/practica_5/Debug/../Core/Src/main.c:87:(.text.main+0x28): undefined reference to `uartInit'
+C:/ST/STM32CubeIDE_1.19.0/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.13.3.rel1.win32_1.0.0.202411081344/tools/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/bin/ld.exe: D:/CESE_25_Embebidos/practica_5/Debug/../Core/Src/main.c:87:(.text.main+0x34): undefined reference to `uartSendString'
+collect2.exe: error: ld returned 1 exit status
+make: *** [makefile:64: practica_5.elf] Error 1
+"make -j8 all" terminated with exit code 2. Build might be incomplete.
 
-23:34:36 Build Finished. 0 errors, 0 warnings. (took 194ms)
+20:20:58 Build Failed. 3 errors, 3 warnings. (took 666ms)
 

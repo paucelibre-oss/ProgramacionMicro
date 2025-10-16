@@ -1,0 +1,27 @@
+/*
+ * myApp_GPIO.c
+ *
+ *  Created on: Oct 8, 2025
+ *      Author: Paulo
+ */
+#include "gpio.h"
+
+void gpioInit(void){
+	GPIO_Init();
+}
+
+void nfcSS(
+	_gpioState state
+){
+
+	if(state == TURN_ON){
+		GPIO_Set(SPI3_CS_GPIO_Port, SPI1_CS_Pin);
+		return;
+	}
+
+	if(state == TURN_OFF){
+		GPIO_Reset(SPI3_CS_GPIO_Port, SPI1_CS_Pin);
+		return;
+	}
+}
+

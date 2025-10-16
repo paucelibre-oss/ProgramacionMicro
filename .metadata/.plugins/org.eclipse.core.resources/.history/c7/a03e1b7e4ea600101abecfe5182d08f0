@@ -1,0 +1,113 @@
+/*
+ * gpio.c
+ *
+ *  Created on: Oct 8, 2025
+ *      Author: Paulo
+ */
+#include "gpio.h"
+
+/**
+  * @brief GPIO Initialization Function
+  * @param None
+  * @retval None
+  */
+void GPIO_Init(void){
+
+	GPIO_InitTypeDef GPIO_InitStruct = {0};
+	  /* USER CODE BEGIN MX_GPIO_Init_1 */
+
+	  /* USER CODE END MX_GPIO_Init_1 */
+
+	  /* GPIO Ports Clock Enable */
+	  __HAL_RCC_GPIOC_CLK_ENABLE();
+	  __HAL_RCC_GPIOH_CLK_ENABLE();
+	  __HAL_RCC_GPIOA_CLK_ENABLE();
+	  __HAL_RCC_GPIOB_CLK_ENABLE();
+
+	  /*Configure GPIO pin Output Level */
+	  HAL_GPIO_WritePin(GPIOA, LED_FIELD_Pin|LED_A_Pin|GPIO_PIN_8|GPIO_PIN_9, GPIO_PIN_RESET);
+
+	  /*Configure GPIO pin Output Level */
+	  HAL_GPIO_WritePin(GPIOB, ST25R_IRQ_Pin|GPIO_PIN_10|LED_A_Pin|GPIO_PIN_6, GPIO_PIN_RESET);
+
+	  /*Configure GPIO pin : B1_Pin */
+	  GPIO_InitStruct.Pin = B1_Pin;
+	  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+	  GPIO_InitStruct.Pull = GPIO_NOPULL;
+	  HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
+
+	  /*Configure GPIO pin : PA0 */
+	  GPIO_InitStruct.Pin = ST25R_IRQ_Pin;
+	  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+	  GPIO_InitStruct.Pull = GPIO_NOPULL;
+	  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+	  /*Configure GPIO pins : PA1 PA4 PA8 PA9 */
+	  GPIO_InitStruct.Pin = LED_FIELD_Pin|LED_A_Pin|GPIO_PIN_8|GPIO_PIN_9;
+	  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+	  GPIO_InitStruct.Pull = GPIO_NOPULL;
+	  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+	  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+	  /*Configure GPIO pins : PB0 PB10 PB4 PB6 */
+	  GPIO_InitStruct.Pin = ST25R_IRQ_Pin|GPIO_PIN_10|LED_A_Pin|GPIO_PIN_6;
+	  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+	  GPIO_InitStruct.Pull = GPIO_NOPULL;
+	  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+	  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+	  /* USER CODE BEGIN MX_GPIO_Init_2 */
+
+	  /* USER CODE END MX_GPIO_Init_2 */
+
+//  GPIO_InitTypeDef GPIO_InitStruct = {0};
+//  /* USER CODE BEGIN MX_GPIO_Init_1 */
+////
+//  /* USER CODE END MX_GPIO_Init_1 */
+//
+//  /* GPIO Ports Clock Enable */
+//  __HAL_RCC_GPIOC_CLK_ENABLE();
+//  __HAL_RCC_GPIOH_CLK_ENABLE();
+//  __HAL_RCC_GPIOA_CLK_ENABLE();
+//  __HAL_RCC_GPIOB_CLK_ENABLE();
+//
+//  /*Configure GPIO pin Output Level */
+//  HAL_GPIO_WritePin(RST_GPIO_Port, ST25R_RST_Pin, GPIO_PIN_RESET);
+//
+//  /*Configure GPIO pin Output Level */
+//  HAL_GPIO_WritePin(SPI1_CS_GPIO_Port, SPI1_CS_Pin , GPIO_PIN_RESET);
+//
+//  /*Configure GPIO pin : B1_Pin */
+//  GPIO_InitStruct.Pin = B1_Pin;
+//  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+//  GPIO_InitStruct.Pull = GPIO_NOPULL;
+//  HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
+//
+//  /*Configure GPIO pin : PA9 */
+//  GPIO_InitStruct.Pin = ST25R_RST_Pin;
+//  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+//  GPIO_InitStruct.Pull = GPIO_NOPULL;
+//  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+//  HAL_GPIO_Init(RST_GPIO_Port, &GPIO_InitStruct);
+//
+//  /*Configure GPIO pin : PB6 */
+//  GPIO_InitStruct.Pin = SPI1_CS_Pin ;
+//  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+//  GPIO_InitStruct.Pull = GPIO_NOPULL;
+//  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+//  HAL_GPIO_Init(SPI1_CS_GPIO_Port, &GPIO_InitStruct);
+}
+
+void GPIO_Set(
+	GPIO_TypeDef* GPIOx,
+	uint16_t GPIO_Pin
+){
+	HAL_GPIO_WritePin(GPIOx, GPIO_Pin, GPIO_PIN_SET);
+}
+
+void GPIO_Reset(
+	GPIO_TypeDef* GPIOx,
+	uint16_t GPIO_Pin
+){
+	HAL_GPIO_WritePin(GPIOx, GPIO_Pin, GPIO_PIN_RESET);
+}

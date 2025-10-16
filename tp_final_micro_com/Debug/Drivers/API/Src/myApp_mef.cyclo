@@ -1,0 +1,8 @@
+../Drivers/API/Src/myApp_mef.c:51:6:initPeripheralsMEF	4
+../Drivers/API/Src/myApp_mef.c:77:12:updateState	15
+../Drivers/API/Src/myApp_mef.c:126:6:executeState	12
+../Drivers/API/Src/myApp_mef.c:172:13:getUID	3
+../Drivers/API/Src/myApp_mef.c:186:13:readTemperature	2
+../Drivers/API/Src/myApp_mef.c:200:13:calculateTemperature	3
+../Drivers/API/Src/myApp_mef.c:216:13:getUARTcommands	6
+../Drivers/API/Src/myApp_mef.c:248:14:umbralConvert	2

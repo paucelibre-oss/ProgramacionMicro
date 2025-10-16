@@ -1,0 +1,8 @@
+../Drivers/API/Src/myApp_mef.c:51:6:initPeripheralsMEF	8	static
+../Drivers/API/Src/myApp_mef.c:77:12:updateState	24	static
+../Drivers/API/Src/myApp_mef.c:126:6:executeState	24	static
+../Drivers/API/Src/myApp_mef.c:172:13:getUID	32	static
+../Drivers/API/Src/myApp_mef.c:186:13:readTemperature	16	static
+../Drivers/API/Src/myApp_mef.c:200:13:calculateTemperature	16	static
+../Drivers/API/Src/myApp_mef.c:216:13:getUARTcommands	104	static
+../Drivers/API/Src/myApp_mef.c:248:14:umbralConvert	24	static

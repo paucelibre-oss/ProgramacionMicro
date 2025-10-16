@@ -1,0 +1,45 @@
+/*
+ * gpio.h
+ *
+ *  Created on: Oct 8, 2025
+ *      Author: Paulo
+ */
+
+#ifndef INC_GPIO_H_
+#define INC_GPIO_H_
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* Includes ------------------------------------------------------------------*/
+#include "stm32f4xx_hal.h"
+
+
+#define B1_Pin GPIO_PIN_13
+#define B1_GPIO_Port GPIOC
+#define LED_Pin	GPIO_PIN_5
+#define RST_PN532_Pin GPIO_PIN_2
+#define RST_PN532_GPIO_Port GPIOD
+#define LED_GPIO_Port GPIOA
+#define SPI3_CS_Pin	GPIO_PIN_15
+#define SPI3_CS_GPIO_Port GPIOA
+
+#define B1_Pin GPIO_PIN_13
+#define B1_GPIO_Port GPIOC
+
+typedef enum {
+	TURN_ON,
+	TURN_OFF
+} _gpioState;
+
+void GPIO_Init(void);
+void GPIO_Set(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin);
+void GPIO_Reset(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin);
+void ledToggleNonBlocking(uint32_t interval); /*Modificar a PCx para evitar connflictos con SPI3*/
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* INC_GPIO_H_ */

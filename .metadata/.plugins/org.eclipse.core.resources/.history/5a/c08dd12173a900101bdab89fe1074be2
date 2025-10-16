@@ -1,0 +1,37 @@
+/*
+ * myApp_GPIO.c
+ *
+ *  Created on: Oct 8, 2025
+ *      Author: Paulo
+ */
+#include "myApp_GPIO.h"
+
+static void actionPin(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin);
+
+void gpioInit(void){
+	GPIO_Init();
+}
+
+void nfcSS(
+	_gpioState state
+){
+	actionPin(SPI3_CS_GPIO_Port, SPI3_CS_Pin);
+}
+
+static void actionPin(
+	GPIO_TypeDef* GPIOx,
+	uint16_t GPIO_Pin
+){
+
+	if(state == TURN_ON){
+		GPIO_Set(GPIOx, GPIO_Pin);
+		return;
+	}
+
+	if(state == TURN_OFF){
+		GPIO_Reset(GPIOx, GPIO_Pin);
+		return;
+	}
+
+}
+

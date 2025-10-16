@@ -1,0 +1,57 @@
+/*
+ * myApp_GPIO.c
+ *
+ *  Created on: Oct 8, 2025
+ *      Author: Paulo
+ */
+#include "myApp_GPIO.h"
+
+static void actionPin(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pi, _gpioState state);
+
+void gpioInit(void){
+	GPIO_Init();
+}
+
+void nfcSS(
+	_gpioState state
+){
+	actionPin(SPI3_CS_GPIO_Port, SPI3_CS_Pin, state);
+}
+
+void nfcRST(
+	_gpioState state
+){
+	actionPin(RST_PN532_GPIO_Port, RST_PN532_Pin, state);
+}
+
+static void actionPin(
+	GPIO_TypeDef* GPIOx,
+	uint16_t GPIO_Pin,
+	_gpioState state
+){
+
+	if(state == TURN_ON){
+		GPIO_Set(GPIOx, GPIO_Pin);
+		return;
+	}
+
+	if(state == TURN_OFF){
+		GPIO_Reset(GPIOx, GPIO_Pin);
+		return;
+	}
+
+}
+/*Modificar a PCx para evitar connflictos con SPI3*/
+void ledToggleNonBlocking(uint32_t interval){
+
+    static uint32_t lastToggle = 0;
+    static GPIO_PinState led_state = GPIO_PIN_RESET;
+
+    if (HAL_GetTick() - lastToggle >= interval){
+        lastToggle = HAL_GetTick();
+        led_state = (led_state == GPIO_PIN_RESET) ? GPIO_PIN_SET : GPIO_PIN_RESET;
+        HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, led_state);
+    }
+}
+
+

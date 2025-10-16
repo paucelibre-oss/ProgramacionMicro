@@ -1,0 +1,12 @@
+/*
+ * PN532.c
+ *
+ *  Created on: Oct 11, 2025
+ *      Author: Paulo
+ */
+#include "PN532.h"
+
+int writeFramePN532(uint8_t* data, uint16_t dataLen){
+
+	if(dataLen > PN532_FRA)
+}

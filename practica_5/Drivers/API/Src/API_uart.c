@@ -6,6 +6,8 @@
  */
 #include "API_uart.h"
 
+#define MAX_TIMEOUT_UART	1000
+
 static void UART_PrintHandle(UART_HandleTypeDef *huart);
 
 bool_t uartInit(void){
@@ -93,7 +95,7 @@ void uartReceiveStringSize(uint8_t * pstring, uint16_t size){
 	const char errorHALStatus[] = "[uartReceiveStringSize] ERROR: The data reception was not OK\r\n";
 	if(pstring == NULL) HAL_UART_Transmit(&huart2, (uint8_t*)(errorPstring), strlen(errorPstring), HAL_MAX_DELAY);
 	if(size <= 0)  HAL_UART_Transmit(&huart2, (uint8_t*)(errorSize), strlen(errorSize), HAL_MAX_DELAY);
-	HAL_StatusTypeDef status = HAL_UART_Receive_IT(&huart2, pstring, size);
+	HAL_StatusTypeDef status = HAL_UART_Receive(&huart2, pstring, size, (uint32_t)(MAX_TIMEOUT_UART));
 	if(status == HAL_BUSY) HAL_UART_Transmit(&huart2, (uint8_t*)(errorHALBusy), strlen(errorHALBusy), HAL_MAX_DELAY);
 	else if(status != HAL_OK) HAL_UART_Transmit(&huart2, (uint8_t*)(errorHALStatus), strlen(errorHALStatus), HAL_MAX_DELAY);
 }

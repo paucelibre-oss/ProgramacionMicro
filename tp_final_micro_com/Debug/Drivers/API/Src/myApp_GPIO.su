@@ -1,0 +1,6 @@
+../Drivers/API/Src/myApp_GPIO.c:11:6:gpioInit	8	static
+../Drivers/API/Src/myApp_GPIO.c:15:6:nfcSS	16	static
+../Drivers/API/Src/myApp_GPIO.c:21:6:nfcRST	16	static
+../Drivers/API/Src/myApp_GPIO.c:27:13:actionPin	16	static
+../Drivers/API/Src/myApp_GPIO.c:45:6:ledOff	8	static
+../Drivers/API/Src/myApp_GPIO.c:49:6:ledToggleNonBlocking	16	static

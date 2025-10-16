@@ -1,0 +1,14 @@
+../Drivers/API/Src/Nueva carpeta/Src/spi.c:16:6:clearFlagTxSPI	1
+../Drivers/API/Src/Nueva carpeta/Src/spi.c:17:6:clearFlagRxSPI	1
+../Drivers/API/Src/Nueva carpeta/Src/spi.c:18:6:getRxFlagStatusSPI	1
+../Drivers/API/Src/Nueva carpeta/Src/spi.c:19:6:getTxFlagStatusSPI	1
+../Drivers/API/Src/Nueva carpeta/Src/spi.c:20:10:getSPILastError	1
+../Drivers/API/Src/Nueva carpeta/Src/spi.c:22:6:HAL_SPI_TxCpltCallback	2
+../Drivers/API/Src/Nueva carpeta/Src/spi.c:29:6:HAL_SPI_RxCpltCallback	2
+../Drivers/API/Src/Nueva carpeta/Src/spi.c:36:6:HAL_SPI_ErrorCallback	2
+../Drivers/API/Src/Nueva carpeta/Src/spi.c:49:19:SPI_Init	1
+../Drivers/API/Src/Nueva carpeta/Src/spi.c:66:19:writeRegisterSPI_IT	1
+../Drivers/API/Src/Nueva carpeta/Src/spi.c:76:19:readRegisterSPI_IT	1
+../Drivers/API/Src/Nueva carpeta/Src/spi.c:86:19:writeRegisterSPI	1
+../Drivers/API/Src/Nueva carpeta/Src/spi.c:94:19:readRegisterSPI	1
+../Drivers/API/Src/Nueva carpeta/Src/spi.c:102:19:writeReadRegisterSPI	1

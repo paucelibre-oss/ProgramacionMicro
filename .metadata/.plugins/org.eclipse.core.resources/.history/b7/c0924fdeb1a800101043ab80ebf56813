@@ -1,0 +1,13 @@
+/*
+ * pn532_stm32.h
+ *
+ *  Created on: Oct 14, 2025
+ *      Author: Paulo
+ */
+
+#ifndef API_INC_PN532_STM32_H_
+#define API_INC_PN532_STM32_H_
+
+
+
+#endif /* API_INC_PN532_STM32_H_ */

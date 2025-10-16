@@ -1,0 +1,207 @@
+/*
+ * myApp_PCcom.c
+ *
+ *  Created on: Oct 8, 2025
+ *      Author: Paulo
+ */
+#include "myApp_PCcom.h"
+
+#define RX_BUFFER_SIZE 64
+
+/* variables locales */
+static uint8_t paramCommand[RX_BUFFER_SIZE];
+static uint8_t rxBuffer[RX_BUFFER_SIZE];
+volatile size_t rxIndex = 0;
+static volatile _uartErrors uartRxBusy = UART_ERROR_WAIT_COMMAND;
+static uint8_t rxByte = 0;
+
+static const char *messagesError[UART_ERROR_COUNT] = {
+	"\r\n[uartSendString] UART ok.",
+	"\r\n[uartSendString] UART waiting command.",
+	"\r\n[uartSendString] The pointer to the string is null!",
+	"\r\n[uartReceiveStringSize] The size must be greater than or equal to 1!",
+	"\r\n[uartReceiveStringSize] ERROR: The UART is busy!",
+	"\r\n[uartReceiveStringSize] ERROR: The data reception was not OK"
+};
+
+static const char *commands[PC_COMMAND_COUNT] = {
+	"NONE",
+	"RESET",
+	"STATUS",
+	"THRESHOLD"
+};
+
+static size_t uartGetData(uint8_t * pstring, uint16_t lenPstring, _uartErrors* error);
+static _uartErrors initReceive(void);
+static _commandPC reviewCommand(uint8_t* command);
+static bool strEqualsIgnoreCase(const char *s1, const char *s2);
+
+uint8_t* getParameter(void){ return paramCommand; }
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
+	if(huart == NULL) return;
+    if (huart->Instance == USART2) {
+    	if(rxByte == '\r' || rxByte == '\n'){
+    		if(rxIndex < RX_BUFFER_SIZE) rxBuffer[rxIndex] = '\0';
+    		else rxBuffer[RX_BUFFER_SIZE-1] = '\0';
+    		uartRxBusy = UART_ERROR_OK;
+    		rxIndex = 0;
+    	}else{
+    		if(rxIndex < RX_BUFFER_SIZE - 1) {
+    			rxBuffer[rxIndex++] = rxByte;
+    		}
+    	}
+
+    	if(HAL_UART_Receive_IT(&huart2, &rxByte, 1) != HAL_OK) uartRxBusy = UART_ERROR_RECEIVE;
+    }
+}
+
+bool uartInit(void){
+
+	if(UART_Init() != HAL_OK) return false;
+	uartSendString((uint8_t*)("\033[2J\033[H"));
+
+    if(HAL_UART_Receive_IT(&huart2, &rxByte, 1) != HAL_OK){
+        uartSendString((uint8_t *)(messagesError[UART_ERROR_RECEIVE]));
+        uartRxBusy = UART_ERROR_RECEIVE;
+        return false;
+    } else {
+        uartRxBusy = UART_ERROR_BUSY; // ya tenemos la recepción armada
+    }
+    return true;
+}
+
+static _uartErrors initReceive(void){
+	if(HAL_UART_Receive_IT(&huart2, &rxByte, 1) != HAL_OK){
+		uartSendString((uint8_t *)(messagesError[UART_ERROR_RECEIVE]));
+		return UART_ERROR_RECEIVE;
+	}
+
+	return UART_ERROR_BUSY;
+}
+
+void uartSendString(
+	uint8_t * pstring
+){
+	if(pstring == NULL){
+		HAL_UART_Transmit(&huart2, (uint8_t*)(messagesError[UART_ERROR_STRING_NULL]), strlen(messagesError[UART_ERROR_STRING_NULL]), HAL_MAX_DELAY);
+		return;
+	}
+	HAL_UART_Transmit(&huart2, pstring, strlen((const char*)(pstring)), HAL_MAX_DELAY);
+}
+
+void uartSendStringSize(
+	uint8_t * pstring,
+	uint16_t size
+){
+	if(pstring == NULL){
+		HAL_UART_Transmit(&huart2, (uint8_t*)(messagesError[UART_ERROR_STRING_NULL]), strlen(messagesError[UART_ERROR_STRING_NULL]), HAL_MAX_DELAY);
+		return;
+	}
+	if(size <= 0){
+		HAL_UART_Transmit(&huart2, (uint8_t*)(messagesError[UART_ERROR_SIZE_ZERO]), strlen(messagesError[UART_ERROR_SIZE_ZERO]), HAL_MAX_DELAY);
+		return;
+	}
+	HAL_UART_Transmit(&huart2, pstring, size, HAL_MAX_DELAY);
+}
+
+_commandPC getCommand(void){
+
+	_uartErrors error;
+	_commandPC commandId = PC_COMMAND_NONE;
+	uint8_t msj[RX_BUFFER_SIZE] = {0};
+
+	size_t size = uartGetData(msj, sizeof(msj)-1, &error);
+	if(error != UART_ERROR_OK) return PC_COMMAND_NONE;
+	if(size > 0){
+		uartSendString((uint8_t*)("\[getCommand] mensaje: "));
+		uartSendString(msj);
+		if(size >= sizeof(msj)) size = sizeof(msj)-1;
+		msj[size] = '\0';
+		commandId = reviewCommand(msj);
+	}
+
+	return commandId;
+}
+
+static size_t uartGetData(
+	uint8_t * pstring,
+	uint16_t lenPstring,
+	_uartErrors* error
+){
+	if(uartRxBusy == UART_ERROR_RECEIVE){
+		memset(rxBuffer, 0x00, sizeof(rxBuffer));
+		rxIndex = 0;
+		uartRxBusy = initReceive();
+		(*error) = uartRxBusy;
+		return 0;
+	}
+
+	if(uartRxBusy != UART_ERROR_OK){
+		(*error) = uartRxBusy;
+		return 0;
+	}
+
+	if(pstring == NULL){
+		HAL_UART_Transmit(&huart2, (uint8_t*)(messagesError[UART_ERROR_STRING_NULL]), strlen(messagesError[UART_ERROR_STRING_NULL]), HAL_MAX_DELAY);
+		return 0;
+	}
+
+	size_t len = strlen((char*)(rxBuffer));
+	memset(pstring, 0x00, lenPstring);
+	memcpy(pstring, rxBuffer, len);
+
+	uartRxBusy = UART_ERROR_BUSY;
+	(*error) = UART_ERROR_OK;
+	return len;
+}
+
+static _commandPC reviewCommand(
+	uint8_t* command
+){
+
+	char cmd[32] = {0};
+	memset(paramCommand, 0x00, sizeof(paramCommand));
+
+	if(command == NULL) return PC_COMMAND_NONE;
+
+	char *sep = strchr((char*)(command), ':');
+	if (sep != NULL) {
+	    size_t cmd_len = sep - (char*)(command);
+	    if (cmd_len >= sizeof(cmd)) cmd_len = sizeof(cmd)-1;
+	    strncpy(cmd, (char*)(command), cmd_len);
+	    cmd[cmd_len] = '\0';
+		uartSendString((uint8_t*)("\[reviewCommand] mensaje con param: "));
+		uartSendString((uint8_t*)(cmd));
+	    strncpy((char*)paramCommand, sep + 1, sizeof(paramCommand)-1);
+	} else {
+        strncpy(cmd, (char*)(command), sizeof(cmd)-1);
+        cmd[sizeof(cmd)-1] = '\0';
+		uartSendString((uint8_t*)("\[reviewCommand] mensaje: "));
+		uartSendString((uint8_t*)(cmd)));
+	}
+
+	if(strEqualsIgnoreCase(cmd, commands[PC_COMMAND_RST])) return PC_COMMAND_RST;
+	if(strEqualsIgnoreCase(cmd, commands[PC_COMMAND_STATUS])) return PC_COMMAND_STATUS;
+	if(strEqualsIgnoreCase(cmd, commands[PC_COMMAND_THRESHOLD])) return PC_COMMAND_THRESHOLD;
+
+	return PC_COMMAND_NONE;
+
+}
+
+/* compara dos strings sin importar mayusculas/minusculas */
+static bool strEqualsIgnoreCase(
+	const char *s1,
+	const char *s2
+){
+	if(s1 == NULL || s2 == NULL) return false;
+
+    while (*s1 && *s2) {
+    	if (tolower((unsigned char)*s1) != tolower((unsigned char)*s2)) return false;
+            return false;
+        s1++;
+        s2++;
+    }
+    return *s1 == '\0' && *s2 == '\0';
+}
+

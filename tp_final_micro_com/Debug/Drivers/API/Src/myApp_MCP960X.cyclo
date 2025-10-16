@@ -1,0 +1,5 @@
+../Drivers/API/Src/myApp_MCP960X.c:13:19:mcp960xInit	7
+../Drivers/API/Src/myApp_MCP960X.c:32:19:mcp960xGetVersion	1
+../Drivers/API/Src/myApp_MCP960X.c:40:19:mcp960xConfFilter	1
+../Drivers/API/Src/myApp_MCP960X.c:50:19:mcp960xDevConfRegister	1
+../Drivers/API/Src/myApp_MCP960X.c:61:19:mcp960xReadTemperature	1

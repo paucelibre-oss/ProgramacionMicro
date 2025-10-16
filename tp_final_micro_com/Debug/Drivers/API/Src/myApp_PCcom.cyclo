@@ -1,0 +1,10 @@
+../Drivers/API/Src/myApp_PCcom.c:39:10:getParameter	1
+../Drivers/API/Src/myApp_PCcom.c:41:6:HAL_UART_RxCpltCallback	8
+../Drivers/API/Src/myApp_PCcom.c:59:6:uartInit	3
+../Drivers/API/Src/myApp_PCcom.c:74:20:initReceive	2
+../Drivers/API/Src/myApp_PCcom.c:83:6:uartSendString	2
+../Drivers/API/Src/myApp_PCcom.c:93:6:uartSendStringSize	3
+../Drivers/API/Src/myApp_PCcom.c:108:12:getCommand	4
+../Drivers/API/Src/myApp_PCcom.c:125:15:uartGetData	4
+../Drivers/API/Src/myApp_PCcom.c:157:19:reviewCommand	14
+../Drivers/API/Src/myApp_PCcom.c:196:13:strEqualsIgnoreCase	10

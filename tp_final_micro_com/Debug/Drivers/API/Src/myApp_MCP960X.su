@@ -1,0 +1,5 @@
+../Drivers/API/Src/myApp_MCP960X.c:13:19:mcp960xInit	112	static
+../Drivers/API/Src/myApp_MCP960X.c:32:19:mcp960xGetVersion	16	static
+../Drivers/API/Src/myApp_MCP960X.c:40:19:mcp960xConfFilter	24	static
+../Drivers/API/Src/myApp_MCP960X.c:50:19:mcp960xDevConfRegister	32	static
+../Drivers/API/Src/myApp_MCP960X.c:61:19:mcp960xReadTemperature	16	static

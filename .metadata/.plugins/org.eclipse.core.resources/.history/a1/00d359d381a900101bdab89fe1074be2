@@ -1,0 +1,64 @@
+/*
+ * RC522.h
+ *
+ *  Created on: Oct 14, 2025
+ *      Author: plibreros
+ */
+
+#ifndef INC_RC522_H_
+#define INC_RC522_H_
+
+#include "stm32f4xx_hal.h"
+#include "spi.h"
+#include "myApp_GPIO.h"
+
+//Maximum length of the array
+#define MAX_LEN 16
+
+// MFRC522 commands. Described in chapter 10 of the datasheet.
+#define PCD_IDLE              0x00               // no action, cancels current command execution
+#define PCD_AUTHENT           0x0E               // performs the MIFARE standard authentication as a reader
+#define PCD_TRANSCEIVE        0x0C               // transmits data from FIFO buffer to antenna and automatically activates the receiver after transmission
+#define PCD_RESETPHASE        0x0F               // resets the MFRC522
+
+//// Commands sent to the PICC.
+#define PICC_REQIDL           0x26               // REQuest command, Type A. Invites PICCs in state IDLE to go to READY and prepare for anticollision or selection. 7 bit frame.
+#define PICC_ANTICOLL         0x93               // Anti collision/Select, Cascade Level 1
+
+//// Success or error code is returned when communication
+typedef enum {
+	NFC_OK,
+	NFC_NOTAGERR,
+	NFC_ERROR,
+} _statusRC522;
+//#define MI_OK                 0
+//#define MI_NOTAGERR           1
+//#define MI_ERR                2
+//
+//
+//// MFRC522 registers. Described in chapter 9 of the datasheet.
+//// Page 0: Command and Status
+#define     CommandReg            0x01
+#define     CommIEnReg            0x02
+#define     CommIrqReg            0x04
+#define     ErrorReg              0x06
+#define     FIFODataReg           0x09
+#define     FIFOLevelReg          0x0A
+#define     ControlReg            0x0C
+#define     BitFramingReg         0x0D
+////Page 1: Command
+#define     ModeReg               0x11
+#define     TxControlReg          0x14
+#define     TxAutoReg             0x15
+////Page 2: Configuration
+#define     TModeReg              0x2A
+#define     TPrescalerReg         0x2B
+#define     TReloadRegH           0x2C
+#define     TReloadRegL           0x2D
+
+// Functions for manipulating the MFRC522
+void MFRC522_Init(void);
+uint8_t MFRC522_Request(uint8_t reqMode, uint8_t *TagType);
+uint8_t MFRC522_Anticoll(uint8_t *serNum);
+
+#endif /* INC_RC522_H_ */

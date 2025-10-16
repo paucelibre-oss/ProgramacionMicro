@@ -1,0 +1,141 @@
+/*
+ * myApp_mef.c
+ *
+ *  Created on: Oct 12, 2025
+ *      Author: Paulo
+ */
+#include "myApp_mef.h"
+
+#define SIZE_TEMP_REGISTER  		2
+#define SIZE_BUFFER_MESSAGE_ERROR 	100
+
+static bool cmdUmbral 	= false;
+static bool cmdStatus 	= false;
+static bool cmdRST 		= false;
+static bool nfcUID		= false;
+static bool measureOk 	= false;
+static float umbralTemp	= 0;
+static float temperature = 0;
+static uint8_t messageStatus[SIZE_BUFFER_MESSAGE_ERROR];
+static char messageTemperature[SIZE_BUFFER_MESSAGE_ERROR];
+
+static const char *messagePrint[MEF_ERROR_COUNT] = {
+	"\r\n[myApp_mef] ERROR: I2C could not be initialized.",
+	"\r\n[myApp_mef] ERROR: SPI could not be initialized.",
+	"\r\n[myApp_mef] ERROR: UART could not be initialized.",
+	"\r\n[myApp_mef] ERROR: Unrecognized UART command.",
+	"\r\n[myApp_mef] ERROR: Temperature could not be obtained.",
+	"\r\n[myApp_mef] ERROR: Incompatible temperature.",
+	"\r\n[myApp_mef] ERROR: UID read error.",
+	"\r\n[myApp_mef] ERROR: Unrecognized state."
+};
+
+static void readTemperature();
+static bool calculateTemperature(uint8_t *rxBuffer);
+
+_mefStates updateState(_mefStates actState){
+
+	_mefStates newState;
+
+	switch(actState){
+		case MEF_STATE_REQUEST_THRESHOLD_UART:
+			if(cmdUmbral) newState = MEF_STATE_MEASURE_TEMPERATURE_LISTEN_UART;
+			else newState = MEF_STATE_MEASURE_TEMPERATURE_LISTEN_UART;
+			break;
+		case MEF_STATE_MEASURE_TEMPERATURE_LISTEN_UART:
+			if(cmdUmbral) newState = MEF_STATE_REWRITE_THRESHOLD_TEMPERATURE;
+			else if(measureOk) newState = MEF_STATE_SAVE_MEDITION;
+			else newState = MEF_STATE_MEASURE_TEMPERATURE_LISTEN_UART;
+			break;
+		case MEF_STATE_SAVE_MEDITION:
+			if(temperature > umbralTemp) newState = MEF_STATE_ALARM;
+			else if(cmdStatus) newState = MEF_STATE_PRINT_TEMPERATURE;
+			else newState = MEF_STATE_MEASURE_TEMPERATURE_LISTEN_UART;
+			break;
+		case MEF_STATE_ALARM:
+			if(cmdRST) newState = MEF_STATE_NOTIFY_RESET;
+			else if(nfcUID) newState = MEF_STATE_NOTIFY_RESET;
+			else newState = MEF_STATE_ALARM;
+			break;
+		case MEF_STATE_PRINT_TEMPERATURE:
+		case MEF_STATE_NOTIFY_RESET:
+		case MEF_STATE_REWRITE_THRESHOLD_TEMPERATURE:
+			newState = MEF_STATE_MEASURE_TEMPERATURE_LISTEN_UART;
+			break;
+		default:
+			newState = MEF_STATE_REQUEST_THRESHOLD_UART;
+			break;
+	}
+
+	return newState;
+}
+
+void executeState(_mefStates newState){
+
+	switch(newState){
+		case MEF_STATE_REQUEST_THRESHOLD_UART:
+			break;
+		case MEF_STATE_MEASURE_TEMPERATURE_LISTEN_UART:
+			readTemperature();
+			break;
+		case MEF_STATE_SAVE_MEDITION:
+			memset(messageTemperature, 0x00, sizeof(messageTemperature));
+			snprintf(messageTemperature, sizeof(messageTemperature), "\r\n[myApp_mef] Temperature: %.1f °C", temperature);
+#ifdef PRINT_DEBUG
+			uartSendString((uint8_t)(messageTemperature));
+#endif
+			break;
+		case MEF_STATE_ALARM:
+			/*Encender un led intermitentemente*/
+			break;
+		case MEF_STATE_PRINT_TEMPERATURE:
+			uartSendString((uint8_t)(messageTemperature));
+			break;
+		case MEF_STATE_NOTIFY_RESET:
+			break;
+		case MEF_STATE_REWRITE_THRESHOLD_TEMPERATURE:
+			break;
+		default:
+			break;
+	}
+}
+
+static void readTemperature(){
+
+	uint16_t devAddr = MCP960X_ID_67;
+	uint8_t rxBuffer[SIZE_TEMP_REGISTER];
+
+	memset(rxBuffer, 0x00, sizeof(rxBuffer));
+
+	if(mcp960xReadTemperature(devAddr, rxBuffer, (uint16_t)(sizeof(rxBuffer))) != HAL_OK){
+		measureOk = false;
+		memset(messageStatus, 0x00, sizeof(messageStatus));
+		memcpy(messageStatus, messagePrint[MEF_ERROR_GET_TEMPERATURE], strlen(messagePrint[MEF_ERROR_GET_TEMPERATURE]));
+#ifdef PRINT_DEBUG
+		uartSendString((uint8_t)(messagePrint[MEF_ERROR_GET_TEMPERATURE]));
+#endif
+		return;
+	}else{
+		measureOk = calculateTemperature(rxBuffer);
+	}
+
+}
+
+static bool calculateTemperature(uint8_t *rxBuffer){
+
+	if(sizeof(rxBuffer) != SIZE_TEMP_REGISTER){
+		memset(messageStatus, 0x00, sizeof(messageStatus));
+		memcpy(messageStatus, messagePrint[MEF_ERROR_INCOMPATIBLE_TEMPERATURE], strlen(messagePrint[MEF_ERROR_INCOMPATIBLE_TEMPERATURE]));
+#ifdef PRINT_DEBUG
+		uartSendString((uint8_t)(messagePrint[MEF_ERROR_INCOMPATIBLE_TEMPERATURE]));
+#endif
+		return false;
+	}
+
+	if((rxBuffer[0] & 0x80) == 0x80){ /*When the temperature is lower than 0°*/
+		temperature = (float)((rxBuffer[0] * 16.0f) + (rxBuffer[1] / 16.0f) - 4096.0f);
+	}else{ /*Otherwise if the temperature is greater than 0°*/
+		temperature = (float)((rxBuffer[0] * 16.0f) + (rxBuffer[1] / 16.0f));
+	}
+}
+

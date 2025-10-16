@@ -1,0 +1,9 @@
+../Drivers/API/Src/Nueva carpeta/Src/PN532.c:40:5:PN532_GetFirmwareVersion	2
+../Drivers/API/Src/Nueva carpeta/Src/PN532.c:53:19:writeFramePN532	6
+../Drivers/API/Src/Nueva carpeta/Src/PN532.c:93:19:readFramePN532	9
+../Drivers/API/Src/Nueva carpeta/Src/PN532.c:140:12:PN532_CallFunction	10
+../Drivers/API/Src/Nueva carpeta/Src/PN532.c:191:19:writeDataPN532SPI	2
+../Drivers/API/Src/Nueva carpeta/Src/PN532.c:204:19:readDataPN532SPI	2
+../Drivers/API/Src/Nueva carpeta/Src/PN532.c:216:13:readWritePN532	1
+../Drivers/API/Src/Nueva carpeta/Src/PN532.c:238:19:wakeUpPN532SPI	1
+../Drivers/API/Src/Nueva carpeta/Src/PN532.c:249:13:PN532_SPI_WaitReady	3

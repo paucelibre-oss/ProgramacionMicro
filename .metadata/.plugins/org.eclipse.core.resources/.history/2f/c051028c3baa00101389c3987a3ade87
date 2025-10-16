@@ -1,0 +1,258 @@
+/*
+ * myApp_mef.c
+ *
+ *  Created on: Oct 12, 2025
+ *      Author: Paulo
+ */
+#include "myApp_mef.h"
+
+#define SIZE_TEMP_REGISTER  		2
+#define SIZE_BUFFER_MESSAGE_ERROR 	100
+#define UID_LEN						5
+#define MESSAGE_LEN					80
+
+static bool cmdUmbral 	= false;
+static bool cmdStatus 	= false;
+static bool cmdRST 		= false;
+static bool nfcUID		= false;
+static bool measureOk 	= false;
+static float umbralTemp	= 0;
+static float temperature = 0;
+static char messageTemperature[SIZE_BUFFER_MESSAGE_ERROR];
+static uint8_t uidAuthor[UID_LEN] = {0xA3, 0x5E, 0x1B, 0xDA, 0x3C};
+
+
+static const char *messagePrint[MEF_ERROR_COUNT] = {
+	"\r\n[myApp_mef] ERROR: MCP9601 could not be initialized.\0",
+	"\r\n[myApp_mef] INFO: MCP9601 init ok.\0",
+	"\r\n[myApp_mef] ERROR: MRFC522 could not be initialized.\0",
+	"\r\n[myApp_mef] INFO: MRFC522 init ok.\0",
+	"\r\n[myApp_mef] INFO: UART init ok.\0",
+	"\r\n[myApp_mef] ERROR: Unrecognized UART command.\0",
+	"\r\n[myApp_mef] ERROR: Temperature could not be obtained.\0",
+	"\r\n[myApp_mef] ERROR: Temperature buffer null.\0",
+	"\r\n[myApp_mef] ERROR: UID read error.\0",
+	"\r\n[myApp_mef] INFO: UID authorized to reboot.\0",
+	"\r\n[myApp_mef] ERROR: Unrecognized state.\0",
+	"\r\n[myApp_mef] ERROR: Invalid entry threshold.\0",
+	"\r\n[myApp_mef] INFO: RESET command receive.\r\n\0",
+	"\r\n[myApp_mef] INFO: Threshold changed correctly.\0"
+};
+
+static void readTemperature(void);
+static bool calculateTemperature(uint8_t *rxBuffer);
+static void getUARTcommands(void);
+static float umbralConvert(uint8_t* param);
+static void getUID(void);
+
+/**/
+bool initPeripheralsMEF(void){
+
+	gpioInit();
+
+	if(!uartInit()) return false;
+	else uartSendString((uint8_t*)(messagePrint[MEF_ERROR_OK_UART_INIT]));
+
+	if(MFRC522_Init() != HAL_OK){ /*MEF_ERROR_MRFC522_INIT*/
+		uartSendString((uint8_t*)(messagePrint[MEF_ERROR_MRFC522_INIT]));
+	  	return false;
+	}else uartSendString((uint8_t*)(messagePrint[MEF_ERROR_OK_MRFC522_INIT]));
+
+	if(mcp960xInit((uint16_t)(MCP960X_ID_67)) != HAL_OK){
+		uartSendString((uint8_t*)(messagePrint[MEF_ERROR_MCP9601_INIT]));
+		return false;
+	}else uartSendString((uint8_t*)(messagePrint[MEF_ERROR_OK_MCP9601_INIT]));
+
+	uartSendString((uint8_t*)("\r\n\r\n----------- Temperature System -----------"));
+	uartSendString((uint8_t*)("\r\n* For RESET alarm, write command RESET."));
+	uartSendString((uint8_t*)("\r\n* For get STATUS, write STATUS."));
+	uartSendString((uint8_t*)("\r\n* For set thresohold, write THRESHOLD: and the float thresold without space."));
+	uartSendString((uint8_t*)("\r\n+ Please put the threashold value:\r\n\r\n"));
+
+	return true;
+}
+
+_mefStates updateState(_mefStates actState){
+
+	_mefStates newState;
+
+	switch(actState){
+		case MEF_STATE_REQUEST_THRESHOLD_UART:
+			if(cmdUmbral){
+				cmdUmbral = false;
+				newState = MEF_STATE_MEASURE_TEMPERATURE_LISTEN_UART;
+			}else newState = MEF_STATE_REQUEST_THRESHOLD_UART;
+			break;
+		case MEF_STATE_MEASURE_TEMPERATURE_LISTEN_UART:
+			if(cmdUmbral){
+				cmdUmbral = false;
+				newState = MEF_STATE_REWRITE_THRESHOLD_TEMPERATURE;
+			}else if(measureOk){
+				measureOk = false;
+				newState = MEF_STATE_SAVE_MEDITION;
+			}else newState = MEF_STATE_MEASURE_TEMPERATURE_LISTEN_UART;
+			break;
+		case MEF_STATE_SAVE_MEDITION:
+			if(temperature > umbralTemp) newState = MEF_STATE_ALARM;
+			else if(cmdStatus){
+				cmdStatus = false;
+				newState = MEF_STATE_PRINT_TEMPERATURE;
+			}else newState = MEF_STATE_MEASURE_TEMPERATURE_LISTEN_UART;
+			break;
+		case MEF_STATE_ALARM:
+			if(cmdStatus){
+				cmdStatus = false;
+			}
+			if(cmdRST){
+				cmdRST = false;
+				newState = MEF_STATE_NOTIFY_RESET;
+			}else if(nfcUID){
+				nfcUID = false;
+				newState = MEF_STATE_NOTIFY_RESET;
+			}
+			else newState = MEF_STATE_ALARM;
+			break;
+		case MEF_STATE_PRINT_ALARM:
+			newState = MEF_STATE_ALARM;
+			break;
+		case MEF_STATE_PRINT_TEMPERATURE:
+		case MEF_STATE_NOTIFY_RESET:
+		case MEF_STATE_REWRITE_THRESHOLD_TEMPERATURE:
+			newState = MEF_STATE_MEASURE_TEMPERATURE_LISTEN_UART;
+			break;
+		default:
+			newState = MEF_STATE_REQUEST_THRESHOLD_UART;
+			break;
+	}
+
+	return newState;
+}
+
+void executeState(_mefStates newState){
+
+//	char msj[MESSAGE_LEN] = {0};
+
+	switch(newState){
+		case MEF_STATE_REQUEST_THRESHOLD_UART:
+			getUARTcommands();
+			break;
+		case MEF_STATE_MEASURE_TEMPERATURE_LISTEN_UART:
+			getUARTcommands();
+			readTemperature();
+			break;
+		case MEF_STATE_SAVE_MEDITION:
+			memset(messageTemperature, 0x00, sizeof(messageTemperature));
+			snprintf(messageTemperature, sizeof(messageTemperature), "\r\n[myApp_mef] Temperature: %.1f °C\r\n", temperature);
+			break;
+		case MEF_STATE_ALARM:
+			/*Encender un led intermitentemente*/
+			getUID();
+			getUARTcommands();
+			break;
+		case MEF_STATE_PRINT_TEMPERATURE:
+			if(messageTemperature[0] != 0) uartSendString((uint8_t*)(messageTemperature));
+			break;
+		case MEF_STATE_NOTIFY_RESET:
+			if(cmdStatus) cmdStatus = false;
+			uartSendString((uint8_t*)(messagePrint[MEF_ERROR_RST_COMMAND_RECEIVE]));
+			break;
+		case MEF_STATE_REWRITE_THRESHOLD_TEMPERATURE:
+			uartSendString((uint8_t*)(messagePrint[MEF_ERROR_THRESHOLD_CHANGE]));
+			break;
+		default:
+			break;
+	}
+}
+
+static void getUID(void){
+
+	uint8_t str[16] = {0};
+	uint8_t sNum[UID_LEN] = {0};
+
+	if((MFRC522_Request((uint8_t)(PICC_REQIDL), str) != NFC_OK) || (MFRC522_Anticoll(str) != NFC_OK)){
+		return;
+	}
+
+	memcpy(sNum, str, sizeof(sNum));
+
+	nfcUID = (memcmp(uidAuthor, sNum, UID_LEN) == 0);
+}
+
+static void readTemperature(void){
+
+	uint16_t devAddr = MCP960X_ID_67;
+	uint8_t rxBuffer[SIZE_TEMP_REGISTER];
+
+	if(mcp960xReadTemperature(devAddr, rxBuffer, (uint16_t)(sizeof(rxBuffer))) != HAL_OK){
+#ifdef PRINT_DEBUG
+		uartSendString((uint8_t*)(messagePrint[MEF_ERROR_GET_TEMPERATURE]));
+#endif
+		return;
+	}else{
+		measureOk = calculateTemperature(rxBuffer);
+	}
+
+}
+
+static bool calculateTemperature(uint8_t *rxBuffer){
+
+	if(rxBuffer == NULL){
+#ifdef PRINT_DEBUG
+		uartSendString((uint8_t*)(messagePrint[MEF_ERROR_BUFFER_TEMPERATURE]));
+#endif
+		return false;
+	}
+
+	if((rxBuffer[0] & 0x80) == 0x80){ /*When the temperature is lower than 0°*/
+		temperature = (float)((rxBuffer[0] * 16.0f) + (rxBuffer[1] / 16.0f) - 4096.0f);
+	}else{ /*Otherwise if the temperature is greater than 0°*/
+		temperature = (float)((rxBuffer[0] * 16.0f) + (rxBuffer[1] / 16.0f));
+	}
+
+	return true;
+}
+
+static void getUARTcommands(void){
+
+	_commandPC comando;
+//	cmdRST = false;
+//	cmdStatus = false;
+//	cmdUmbral = false;
+//	char msj[MESSAGE_LEN] = {0};
+
+	comando = getCommand();
+
+	switch(comando){
+		case	PC_COMMAND_RST:
+			cmdRST = true;
+			break;
+		case PC_COMMAND_STATUS:
+			cmdStatus = true;
+			break;
+		case PC_COMMAND_THRESHOLD:
+			float val = umbralConvert(getParameter());
+			if(!isnan(val)){
+				cmdUmbral = true;
+				umbralTemp = val;
+//				snprintf(msj, sizeof(msj), "\r\n- New threshold: %.1f °C", umbralTemp);
+//				uartSendString((uint8_t*)(msj));
+			}
+			break;
+		 default:
+			 break;
+	  }
+}
+
+static float umbralConvert(uint8_t* param){
+
+	char *endptr;
+	float value = strtof((char*)param, &endptr);
+
+	if (param == (uint8_t*)endptr) {
+		uartSendString((uint8_t*)(messagePrint[MEF_ERROR_NOCONVERT_THRESHOLD]));
+		return NAN;
+	}
+
+	return value;
+}
+
