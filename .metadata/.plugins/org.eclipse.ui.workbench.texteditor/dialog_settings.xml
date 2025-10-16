@@ -20,6 +20,7 @@
 		<item value="NFC_STATUS_ERROR"/>
 	</list>
 	<list key="searchhistory">
+		<item value="MESSAGE_LEN"/>
 		<item value="GPIOB"/>
 		<item value="GPIO_PIN_7"/>
 		<item value="messageStatus"/>
@@ -34,7 +35,6 @@
 		<item value="MI_ERR"/>
 		<item value="TxControlReg"/>
 		<item value="uchar"/>
-		<item value="HAL_GPIO_WritePin(MFRC522_RST_PORT,MFRC522_RST_PIN,GPIO_PIN_SET);"/>
 	</list>
 	<section name="org.eclipse.ui.texteditor.FindReplaceDialog">
 		<item key="selection" value=""/>

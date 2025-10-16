@@ -260,11 +260,12 @@ static _commandPC reviewCommand(
 }
 
 /*
- * Function Name: strEqualsIgnoreCase
- * Function Description: Compare the captured command with the list of allowed commands. Regardless of upper or lower case.
- * Input Parameters: const char *s1 - Incoming command. const char *s2 - Allowed command.
- * Return value: True, if the command is recognized, otherwise False.
+ * Function Name:
+ * Function Description:
+ * Input Parameters:
+ * Return value:
  */
+/* compara dos strings sin importar mayusculas/minusculas */
 static bool strEqualsIgnoreCase(
 	const char *s1,
 	const char *s2

@@ -8,18 +8,13 @@
 
 #define RX_BUFFER_SIZE 64
 
-/*Variable that stores the threshold parameter received by UART*/
+/* variables locales */
 static uint8_t paramCommand[RX_BUFFER_SIZE];
-/*UART receive buffer*/
 static uint8_t rxBuffer[RX_BUFFER_SIZE];
-/*Index of the buffer reception UART*/
 volatile size_t rxIndex = 0;
-/*UART reception state variable*/
 static volatile _uartErrors uartRxBusy = UART_ERROR_WAIT_COMMAND;
-/*Incoming byte via UART*/
 static uint8_t rxByte = 0;
 
-/*Variable containing errors and printable messages*/
 static const char *messagesError[UART_ERROR_COUNT] = {
 	"\r\n[myApp_PCcom] UART ok.",
 	"\r\n[myApp_PCcom] UART waiting command.",
@@ -29,7 +24,6 @@ static const char *messagesError[UART_ERROR_COUNT] = {
 	"\r\n[myApp_PCcom] ERROR: The data reception was not OK"
 };
 
-/*List of commands received by UART*/
 static const char *commands[PC_COMMAND_COUNT] = {
 	"NONE",
 	"RESET",
@@ -37,25 +31,18 @@ static const char *commands[PC_COMMAND_COUNT] = {
 	"THRESHOLD"
 };
 
-/*Static methods.*/
 static size_t uartGetData(uint8_t * pstring, uint16_t lenPstring, _uartErrors* error);
 static _uartErrors initReceive(void);
 static _commandPC reviewCommand(uint8_t* command);
 static bool strEqualsIgnoreCase(const char *s1, const char *s2);
 
-/*
- * Function Name:getParameter
- * Function Description: Returns the parameter identified incoming by UART.
- * Input Parameters: None.
- * Return value: A pointer of paramCommand.
- */
 uint8_t* getParameter(void){ return paramCommand; }
 
 /*
- * Function Name: HAL_UART_RxCpltCallback
- * Function Description: UART peripheral callback function.
- * Input Parameters: UART_HandleTypeDef *huart - UART peripheral number.
- * Return value: None.
+ * Function Name:
+ * Function Description:
+ * Input Parameters:
+ * Return value:
  */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 	if(huart == NULL) return;
@@ -76,10 +63,10 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 }
 
 /*
- * Function Name: uartInit
- * Function Description: UART initialization.
- * Input Parameters: None.
- * Return value: Status of initialization. True if success, else false.
+ * Function Name:
+ * Function Description:
+ * Input Parameters:
+ * Return value:
  */
 bool uartInit(void){
 
@@ -91,16 +78,16 @@ bool uartInit(void){
         uartRxBusy = UART_ERROR_RECEIVE;
         return false;
     } else {
-        uartRxBusy = UART_ERROR_BUSY;
+        uartRxBusy = UART_ERROR_BUSY; // ya tenemos la recepción armada
     }
     return true;
 }
 
 /*
- * Function Name: initReceive
- * Function Description: Start UART reception via interrupts.
- * Input Parameters: None
- * Return value: _uartErrors - Status of UART proccess.
+ * Function Name:
+ * Function Description:
+ * Input Parameters:
+ * Return value:
  */
 static _uartErrors initReceive(void){
 	if(HAL_UART_Receive_IT(&huart2, &rxByte, 1) != HAL_OK){
@@ -112,10 +99,10 @@ static _uartErrors initReceive(void){
 }
 
 /*
- * Function Name: uartSendString
- * Function Description: Receives a pointer to a string to be sent over the UART. Also, the number of characters to be sent.
- * Input Parameters: uint8_t * pstring: A pointer to a string that you want to send.
- * Return value: None.
+ * Function Name:
+ * Function Description:
+ * Input Parameters:
+ * Return value:
  */
 void uartSendString(
 	uint8_t * pstring
@@ -128,10 +115,10 @@ void uartSendString(
 }
 
 /*
- * Function Name: uartSendStringSize
- * Function Description: Receives a pointer to a string to be sent over the UART. Also, the number of characters to be sent.
- * Input Parameters: uint8_t * pstring: A pointer to a string that you want to send. uint16_t size: The number of characters to be sent.
- * Return value: None.
+ * Function Name:
+ * Function Description:
+ * Input Parameters:
+ * Return value:
  */
 void uartSendStringSize(
 	uint8_t * pstring,
@@ -149,10 +136,10 @@ void uartSendStringSize(
 }
 
 /*
- * Function Name: getCommand
- * Function Description: Analyzes incoming bytes via UART and identifies the command received.
- * Input Parameters: None.
- * Return value: _commandPC - ID of the command received.
+ * Function Name:
+ * Function Description:
+ * Input Parameters:
+ * Return value:
  */
 _commandPC getCommand(void){
 
@@ -172,11 +159,10 @@ _commandPC getCommand(void){
 }
 
 /*
- * Function Name: uartGetData
- * Function Description: Checks and captures incoming data via UART, only if the special characters '\n' or '\r' were received
- * Input Parameters: uint8_t * pstring - A pointer to the command capture buffer. uint16_t lenPstring - Size of buffer pstring.
- * 					 _uartErrors* error - A pointer to return error status.
- * Return value: size_t: Captured frame size.
+ * Function Name:
+ * Function Description:
+ * Input Parameters:
+ * Return value:
  */
 static size_t uartGetData(
 	uint8_t * pstring,
@@ -211,10 +197,10 @@ static size_t uartGetData(
 }
 
 /*
- * Function Name: reviewCommand
- * Function Description: Processes the incoming UART frame and identifies the received command with its respective parameters.
- * Input Parameters: uint8_t* command - A pointer to where the received frame is located
- * Return value: _commandPC - The id of the detected command.
+ * Function Name:
+ * Function Description:
+ * Input Parameters:
+ * Return value:
  */
 static _commandPC reviewCommand(
 	uint8_t* command
@@ -225,10 +211,6 @@ static _commandPC reviewCommand(
 
 	if(command == NULL) return PC_COMMAND_NONE;
 
-	/* Check if the captured frame contains additional parameters, identified by ':'
-	 * If it contains both, it splits the frame into two. Command and parameters. It saves both and adds the '\0' terminator.
-	 * Additionally, it removes special characters such as '\n', '\r' or unwanted spaces.
-	 */
 	char *sep = strchr((char*)(command), ':');
 	if (sep != NULL) {
 	    size_t cmd_len = sep - (char*)(command);
@@ -250,7 +232,6 @@ static _commandPC reviewCommand(
     while (*start == ' ' || *start == '\t') start++;
     if (start != cmd) memmove(cmd, start, strlen(start) + 1);
 
-    /* Check if the incoming command belongs to the list of known commands.*/
 	if(strEqualsIgnoreCase(cmd, commands[PC_COMMAND_RST])) return PC_COMMAND_RST;
 	if(strEqualsIgnoreCase(cmd, commands[PC_COMMAND_STATUS])) return PC_COMMAND_STATUS;
 	if(strEqualsIgnoreCase(cmd, commands[PC_COMMAND_THRESHOLD])) return PC_COMMAND_THRESHOLD;
@@ -260,11 +241,12 @@ static _commandPC reviewCommand(
 }
 
 /*
- * Function Name: strEqualsIgnoreCase
- * Function Description: Compare the captured command with the list of allowed commands. Regardless of upper or lower case.
- * Input Parameters: const char *s1 - Incoming command. const char *s2 - Allowed command.
- * Return value: True, if the command is recognized, otherwise False.
+ * Function Name:
+ * Function Description:
+ * Input Parameters:
+ * Return value:
  */
+/* compara dos strings sin importar mayusculas/minusculas */
 static bool strEqualsIgnoreCase(
 	const char *s1,
 	const char *s2

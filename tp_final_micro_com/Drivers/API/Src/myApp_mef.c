@@ -6,23 +6,30 @@
  */
 #include "myApp_mef.h"
 
+/*----- Glovals defines -------*/
+
+/*Fixed size of incoming temperature buffer.*/
 #define SIZE_TEMP_REGISTER  		2
+/*Maximum message size to print*/
 #define SIZE_BUFFER_MESSAGE_ERROR 	100
+/*RFC UID Size*/
 #define UID_LEN						5
+/*Conversion buffer size for snprintf*/
 #define MESSAGE_LEN					80
+/*LED toggle time in ms*/
 #define TOGGLE_INTERVAL				300
 
-static bool cmdUmbral 	= false;
-static bool cmdStatus 	= false;
-static bool cmdRST 		= false;
-static bool nfcUID		= false;
-static bool measureOk 	= false;
-static float umbralTemp	= 0;
-static float temperature = 0;
-static char messageTemperature[SIZE_BUFFER_MESSAGE_ERROR];
-static uint8_t uidAuthor[UID_LEN] = {0xA3, 0x5E, 0x1B, 0xDA, 0x3C};
+static bool cmdUmbral 	= false; /*Reception flag. Command THRESHOLD*/
+static bool cmdStatus 	= false; /*Reception flag. Command STATUS*/
+static bool cmdRST 		= false; /*Reception flag. Command RESET*/
+static bool nfcUID		= false; /*Reception flag. Recognized UID*/
+static bool measureOk 	= false; /*Reception flag. Temperature measurement OK*/
+static float umbralTemp	= 0;	 /*Variable that stores the temperature threshold.*/
+static float temperature = 0;	 /*Variable that stores the temperature.*/
+static char messageTemperature[SIZE_BUFFER_MESSAGE_ERROR]; /*Variable where the printable temperature message is stored*/
+static uint8_t uidAuthor[UID_LEN] = {0xA3, 0x5E, 0x1B, 0xDA, 0x3C}; /*Variable containing the authorized UID*/
 
-
+/*Variable containing errors and printable messages*/
 static const char *messagePrint[MEF_ERROR_COUNT] = {
 	"\r\n[myApp_mef] ERROR: MCP9601 could not be initialized.\0",
 	"\r\n[myApp_mef] INFO: MCP9601 init ok.\0",
@@ -41,13 +48,19 @@ static const char *messagePrint[MEF_ERROR_COUNT] = {
 	"\r\n[myApp_mef] INFO: Temperature Alarm.\r\n\0"
 };
 
+/*Static methods.*/
 static void readTemperature(void);
 static bool calculateTemperature(uint8_t *rxBuffer);
 static void getUARTcommands(void);
 static float umbralConvert(uint8_t* param);
 static void getUID(void);
 
-/**/
+/*
+ * Function Name: initPeripheralsMEF
+ * Function Description: Initializes UART, I2C, SPI peripherals and configures RFID and temperature transceivers.
+ * Input Parameters: None.
+ * Return value: True if the process success, false in any other case.
+ */
 bool initPeripheralsMEF(void){
 
 	gpioInit();
@@ -74,6 +87,12 @@ bool initPeripheralsMEF(void){
 	return true;
 }
 
+/*
+ * Function Name: updateState
+ * Function Description: Calculate, according to the current state of the FSM, the new state.
+ * Input Parameters: _mefStates actState - Actual state.
+ * Return value: _mefStates - The new state.
+ */
 _mefStates updateState(_mefStates actState){
 
 	_mefStates newState;
@@ -123,6 +142,12 @@ _mefStates updateState(_mefStates actState){
 	return newState;
 }
 
+/*
+ * Function Name: executeState
+ * Function Description: Execute the actions to be implemented in each state.
+ * Input Parameters: _mefStates newState - The new state.
+ * Return value: None.
+ */
 void executeState(_mefStates newState){
 
 //	char msj[MESSAGE_LEN] = {0};
@@ -169,6 +194,12 @@ void executeState(_mefStates newState){
 	}
 }
 
+/*
+ * Function Name:getUID
+ * Function Description: Gets and compares the incoming UID with the authorized UID.
+ * Input Parameters: None.
+ * Return value: None.
+ */
 static void getUID(void){
 
 	uint8_t str[16] = {0};
@@ -183,6 +214,12 @@ static void getUID(void){
 	nfcUID = (memcmp(uidAuthor, sNum, UID_LEN) == 0);
 }
 
+/*
+ * Function Name: readTemperature
+ * Function Description: Obtains and processes the bytes corresponding to the sensed temperature.
+ * Input Parameters: None.
+ * Return value: None.
+ */
 static void readTemperature(void){
 
 	uint16_t devAddr = MCP960X_ID_67;
@@ -197,6 +234,12 @@ static void readTemperature(void){
 
 }
 
+/*
+ * Function Name: calculateTemperature
+ * Function Description: Calculates the temperature based on the manufacturer's datasheet (MCP960x).
+ * Input Parameters: uint8_t *rxBuffer - A pointer of the obtained temperature.
+ * Return value: True if the calculation was performed. False otherwise.
+ */
 static bool calculateTemperature(uint8_t *rxBuffer){
 
 	if(rxBuffer == NULL){
@@ -213,6 +256,12 @@ static bool calculateTemperature(uint8_t *rxBuffer){
 	return true;
 }
 
+/*
+ * Function Name: getUARTcommands
+ * Function Description: Checks if there is a new command received by UART and sets the necessary flags.
+ * Input Parameters: None.
+ * Return value: None.
+ */
 static void getUARTcommands(void){
 
 	_commandPC comando;
@@ -245,6 +294,12 @@ static void getUARTcommands(void){
 	  }
 }
 
+/*
+ * Function Name: umbralConvert
+ * Function Description: Receives and converts the incoming parameter to float.
+ * Input Parameters: uint8_t* param - A pointer containing the parameter to be converted.
+ * Return value: A float value. On error, returns NAN.
+ */
 static float umbralConvert(uint8_t* param){
 
 	char *endptr;

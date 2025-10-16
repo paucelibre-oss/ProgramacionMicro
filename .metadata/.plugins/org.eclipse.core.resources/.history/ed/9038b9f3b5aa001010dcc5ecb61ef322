@@ -109,6 +109,10 @@ typedef enum {
 HAL_StatusTypeDef mcp960xInit(uint16_t devAddr);
 HAL_StatusTypeDef mcp960xReadTemperature(uint16_t devAddr, uint8_t* rxBuffer, uint16_t rxLength);
 
+
+HAL_StatusTypeDef mcp960xGetVersion(uint16_t devAddr, uint8_t* rxBuffer);
+HAL_StatusTypeDef mcp960xConfFilter(uint16_t devAddr, uint8_t thermoType, uint8_t filterOrder);
+HAL_StatusTypeDef mcp960xDevConfRegister(uint8_t devAddr, uint8_t coldResol, uint8_t adcResol, uint8_t burstSample, uint8_t shutDMode);
 #ifdef __cplusplus
 }
 #endif

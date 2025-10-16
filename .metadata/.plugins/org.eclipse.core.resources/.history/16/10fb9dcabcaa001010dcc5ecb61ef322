@@ -172,11 +172,10 @@ _commandPC getCommand(void){
 }
 
 /*
- * Function Name: uartGetData
- * Function Description: Checks and captures incoming data via UART, only if the special characters '\n' or '\r' were received
- * Input Parameters: uint8_t * pstring - A pointer to the command capture buffer. uint16_t lenPstring - Size of buffer pstring.
- * 					 _uartErrors* error - A pointer to return error status.
- * Return value: size_t: Captured frame size.
+ * Function Name:
+ * Function Description:
+ * Input Parameters:
+ * Return value:
  */
 static size_t uartGetData(
 	uint8_t * pstring,
@@ -211,10 +210,10 @@ static size_t uartGetData(
 }
 
 /*
- * Function Name: reviewCommand
- * Function Description: Processes the incoming UART frame and identifies the received command with its respective parameters.
- * Input Parameters: uint8_t* command - A pointer to where the received frame is located
- * Return value: _commandPC - The id of the detected command.
+ * Function Name:
+ * Function Description:
+ * Input Parameters:
+ * Return value:
  */
 static _commandPC reviewCommand(
 	uint8_t* command
@@ -225,10 +224,6 @@ static _commandPC reviewCommand(
 
 	if(command == NULL) return PC_COMMAND_NONE;
 
-	/* Check if the captured frame contains additional parameters, identified by ':'
-	 * If it contains both, it splits the frame into two. Command and parameters. It saves both and adds the '\0' terminator.
-	 * Additionally, it removes special characters such as '\n', '\r' or unwanted spaces.
-	 */
 	char *sep = strchr((char*)(command), ':');
 	if (sep != NULL) {
 	    size_t cmd_len = sep - (char*)(command);
@@ -250,7 +245,6 @@ static _commandPC reviewCommand(
     while (*start == ' ' || *start == '\t') start++;
     if (start != cmd) memmove(cmd, start, strlen(start) + 1);
 
-    /* Check if the incoming command belongs to the list of known commands.*/
 	if(strEqualsIgnoreCase(cmd, commands[PC_COMMAND_RST])) return PC_COMMAND_RST;
 	if(strEqualsIgnoreCase(cmd, commands[PC_COMMAND_STATUS])) return PC_COMMAND_STATUS;
 	if(strEqualsIgnoreCase(cmd, commands[PC_COMMAND_THRESHOLD])) return PC_COMMAND_THRESHOLD;
@@ -260,11 +254,12 @@ static _commandPC reviewCommand(
 }
 
 /*
- * Function Name: strEqualsIgnoreCase
- * Function Description: Compare the captured command with the list of allowed commands. Regardless of upper or lower case.
- * Input Parameters: const char *s1 - Incoming command. const char *s2 - Allowed command.
- * Return value: True, if the command is recognized, otherwise False.
+ * Function Name:
+ * Function Description:
+ * Input Parameters:
+ * Return value:
  */
+/* compara dos strings sin importar mayusculas/minusculas */
 static bool strEqualsIgnoreCase(
 	const char *s1,
 	const char *s2

@@ -6,14 +6,13 @@
  */
 #include "myApp_GPIO.h"
 
-/*Static methods.*/
 static void actionPin(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pi, _gpioState state);
 
 /*
  * Function Name: gpioInit
- * Function Description: Initialize the GPIO ports.
- * Input Parameters: None.
- * Return value: None.
+ * Function Description: Initialize the GPIO ports
+ * Input Parameters: None
+ * Return value: None
  */
 void gpioInit(void){
 	GPIO_Init();
@@ -21,9 +20,9 @@ void gpioInit(void){
 
 /*
  * Function Name: nfcSS
- * Function Description: Pull the CSS pin of the MRFC522 high or low.
+ * Function Description: Pull the CSS pin of the MRFC522 high or low
  * Input Parameters: _gpioState state. TURN_ON for High or TURN_OFF for low.
- * Return value: None.
+ * Return value: None
  */
 void nfcSS(
 	_gpioState state
@@ -32,10 +31,10 @@ void nfcSS(
 }
 
 /*
- * Function Name: nfcRST
- * Function Description: Pull the RST pin of the MRFC522 high or low.
- * Input Parameters: _gpioState state. TURN_ON for High or TURN_OFF for low.
- * Return value: None.
+ * Function Name:
+ * Function Description:
+ * Input Parameters:
+ * Return value:
  */
 void nfcRST(
 	_gpioState state
@@ -44,10 +43,10 @@ void nfcRST(
 }
 
 /*
- * Function Name: actionPin
- * Function Description: Put a selected pin high or low.
- * Input Parameters: GPIO_TypeDef* GPIOx - Port of the pin, uint16_t GPIO_Pin - The pin number. _gpioState state - the state of pin.
- * Return value: None.
+ * Function Name:
+ * Function Description:
+ * Input Parameters:
+ * Return value:
  */
 static void actionPin(
 	GPIO_TypeDef* GPIOx,
@@ -68,20 +67,20 @@ static void actionPin(
 }
 
 /*
- * Function Name: ledOff
- * Function Description: Turn off LED2 on the NUCLEO-F446RE board.
- * Input Parameters: None.
- * Return value: None.
+ * Function Name:
+ * Function Description:
+ * Input Parameters:
+ * Return value:
  */
 void ledOff(void){
 	actionPin(LED_GPIO_Port, LED_Pin, TURN_OFF);
 }
 
 /*
- * Function Name: ledToggleNonBlocking
- * Function Description: Toggles the state of the LED2 pin. Non-blocking method.
- * Input Parameters: uint32_t interval - Delays in ms between alternation.
- * Return value: None.
+ * Function Name:
+ * Function Description:
+ * Input Parameters:
+ * Return value:
  */
 void ledToggleNonBlocking(uint32_t interval){
 

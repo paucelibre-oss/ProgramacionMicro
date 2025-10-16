@@ -6,7 +6,6 @@
  */
 #include "myApp_GPIO.h"
 
-/*Static methods.*/
 static void actionPin(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pi, _gpioState state);
 
 /*

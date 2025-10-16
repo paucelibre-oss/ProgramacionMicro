@@ -16,12 +16,12 @@ static volatile _uartErrors uartRxBusy = UART_ERROR_WAIT_COMMAND;
 static uint8_t rxByte = 0;
 
 static const char *messagesError[UART_ERROR_COUNT] = {
-	"\r\n[uartSendString] UART ok.",
-	"\r\n[uartSendString] UART waiting command.",
-	"\r\n[uartSendString] The pointer to the string is null!",
-	"\r\n[uartReceiveStringSize] The size must be greater than or equal to 1!",
-	"\r\n[uartReceiveStringSize] ERROR: The UART is busy!",
-	"\r\n[uartReceiveStringSize] ERROR: The data reception was not OK"
+	"\r\n[myApp_PCcom] UART ok.",
+	"\r\n[myApp_PCcom] UART waiting command.",
+	"\r\n[myApp_PCcom] The pointer to the string is null!",
+	"\r\n[myApp_PCcom] The size must be greater than or equal to 1!",
+	"\r\n[myApp_PCcom] ERROR: The UART is busy!",
+	"\r\n[myApp_PCcom] ERROR: The data reception was not OK"
 };
 
 static const char *commands[PC_COMMAND_COUNT] = {
@@ -33,18 +33,23 @@ static const char *commands[PC_COMMAND_COUNT] = {
 
 static size_t uartGetData(uint8_t * pstring, uint16_t lenPstring, _uartErrors* error);
 static _uartErrors initReceive(void);
-static _commandPC reviewCommand(uint8_t* command, uint16_t lenComm);
+static _commandPC reviewCommand(uint8_t* command);
 static bool strEqualsIgnoreCase(const char *s1, const char *s2);
 
+uint8_t* getParameter(void){ return paramCommand; }
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
+	if(huart == NULL) return;
     if (huart->Instance == USART2) {
     	if(rxByte == '\r' || rxByte == '\n'){
-    		rxBuffer[rxIndex] = '\0';
+    		if(rxIndex < RX_BUFFER_SIZE) rxBuffer[rxIndex] = '\0';
+    		else rxBuffer[RX_BUFFER_SIZE-1] = '\0';
     		uartRxBusy = UART_ERROR_OK;
     		rxIndex = 0;
     	}else{
-    		if(rxIndex < RX_BUFFER_SIZE - 1) rxBuffer[rxIndex++] = rxByte;
+    		if(rxIndex < RX_BUFFER_SIZE - 1) {
+    			rxBuffer[rxIndex++] = rxByte;
+    		}
     	}
 
     	if(HAL_UART_Receive_IT(&huart2, &rxByte, 1) != HAL_OK) uartRxBusy = UART_ERROR_RECEIVE;
@@ -56,12 +61,14 @@ bool uartInit(void){
 	if(UART_Init() != HAL_OK) return false;
 	uartSendString((uint8_t*)("\033[2J\033[H"));
 
-	if(HAL_UART_Receive_IT(&huart2, &rxByte, 1) != HAL_OK){
-		uartSendString((uint8_t *)(messagesError[UART_ERROR_RECEIVE]));
-		uartRxBusy = UART_ERROR_RECEIVE;
-	}
-
-	return true;
+    if(HAL_UART_Receive_IT(&huart2, &rxByte, 1) != HAL_OK){
+        uartSendString((uint8_t *)(messagesError[UART_ERROR_RECEIVE]));
+        uartRxBusy = UART_ERROR_RECEIVE;
+        return false;
+    } else {
+        uartRxBusy = UART_ERROR_BUSY; // ya tenemos la recepción armada
+    }
+    return true;
 }
 
 static _uartErrors initReceive(void){
@@ -76,7 +83,10 @@ static _uartErrors initReceive(void){
 void uartSendString(
 	uint8_t * pstring
 ){
-	if(pstring == NULL) HAL_UART_Transmit(&huart2, (uint8_t*)(messagesError[UART_ERROR_STRING_NULL]), strlen(messagesError[UART_ERROR_STRING_NULL]), HAL_MAX_DELAY);
+	if(pstring == NULL){
+		HAL_UART_Transmit(&huart2, (uint8_t*)(messagesError[UART_ERROR_STRING_NULL]), strlen(messagesError[UART_ERROR_STRING_NULL]), HAL_MAX_DELAY);
+		return;
+	}
 	HAL_UART_Transmit(&huart2, pstring, strlen((const char*)(pstring)), HAL_MAX_DELAY);
 }
 
@@ -84,21 +94,32 @@ void uartSendStringSize(
 	uint8_t * pstring,
 	uint16_t size
 ){
-	if(pstring == NULL) HAL_UART_Transmit(&huart2, (uint8_t*)(messagesError[UART_ERROR_STRING_NULL]), strlen(messagesError[UART_ERROR_STRING_NULL]), HAL_MAX_DELAY);
-	if(size <= 0) HAL_UART_Transmit(&huart2, (uint8_t*)(messagesError[UART_ERROR_SIZE_ZERO]), strlen(messagesError[UART_ERROR_SIZE_ZERO]), HAL_MAX_DELAY);
+	if(pstring == NULL){
+		HAL_UART_Transmit(&huart2, (uint8_t*)(messagesError[UART_ERROR_STRING_NULL]), strlen(messagesError[UART_ERROR_STRING_NULL]), HAL_MAX_DELAY);
+		return;
+	}
+	if(size <= 0){
+		HAL_UART_Transmit(&huart2, (uint8_t*)(messagesError[UART_ERROR_SIZE_ZERO]), strlen(messagesError[UART_ERROR_SIZE_ZERO]), HAL_MAX_DELAY);
+		return;
+	}
 	HAL_UART_Transmit(&huart2, pstring, size, HAL_MAX_DELAY);
 }
 
-_commandPC getCommand(uint8_t* param){
+_commandPC getCommand(void){
 
 	_uartErrors error;
 	_commandPC commandId = PC_COMMAND_NONE;
+	uint8_t msj[RX_BUFFER_SIZE] = {0};
 
-	size_t size = uartGetData(msj, 50, &error);
+	size_t size = uartGetData(msj, sizeof(msj)-1, &error);
 	if(error != UART_ERROR_OK) return PC_COMMAND_NONE;
 	if(size > 0){
-		commandId = reviewCommand(command, lenComm);
+		if(size >= sizeof(msj)) size = sizeof(msj)-1;
+		msj[size] = '\0';
+		commandId = reviewCommand(msj);
 	}
+
+	return commandId;
 }
 
 static size_t uartGetData(
@@ -134,27 +155,40 @@ static size_t uartGetData(
 }
 
 static _commandPC reviewCommand(
-	uint8_t* command,
-	uint16_t lenComm
+	uint8_t* command
 ){
 
 	char cmd[32] = {0};
-	memset(param, 0x00, lenParam);
+	memset(paramCommand, 0x00, sizeof(paramCommand));
+
+	if(command == NULL) return PC_COMMAND_NONE;
 
 	char *sep = strchr((char*)(command), ':');
 	if (sep != NULL) {
 	    size_t cmd_len = sep - (char*)(command);
+	    if (cmd_len >= sizeof(cmd)) cmd_len = sizeof(cmd)-1;
 	    strncpy(cmd, (char*)(command), cmd_len);
-	    strcpy(param, sep + 1);
+	    cmd[cmd_len] = '\0';
+	    strncpy((char*)paramCommand, sep + 1, sizeof(paramCommand)-1);
+	    paramCommand[sizeof(paramCommand) - 1] = '\0';
 	} else {
-	    strcpy(cmd, (char*)(command));
+        strncpy(cmd, (char*)(command), sizeof(cmd)-1);
+        cmd[sizeof(cmd)-1] = '\0';
 	}
 
-	if(strEqualsIgnoreCase(command, commands[PC_COMMAND_RST])) return PC_COMMAND_RST;
-	if(strEqualsIgnoreCase(command, commands[PC_COMMAND_STATUS])) return PC_COMMAND_STATUS;
-	if(strEqualsIgnoreCase(command, commands[PC_COMMAND_THRESHOLD])) return PC_COMMAND_THRESHOLD;
+    size_t len = strlen(cmd);
+    while (len > 0 && (cmd[len-1] == '\r' || cmd[len-1] == '\n' || cmd[len-1] == ' '))
+    cmd[--len] = '\0';
 
-	return PC_COMMAND_NONE;
+    char *start = cmd;
+    while (*start == ' ' || *start == '\t') start++;
+    if (start != cmd) memmove(cmd, start, strlen(start) + 1);
+
+	if(strEqualsIgnoreCase(cmd, commands[PC_COMMAND_RST])) return PC_COMMAND_RST;
+	if(strEqualsIgnoreCase(cmd, commands[PC_COMMAND_STATUS])) return PC_COMMAND_STATUS;
+	if(strEqualsIgnoreCase(cmd, commands[PC_COMMAND_THRESHOLD])) return PC_COMMAND_THRESHOLD;
+
+	return PC_COMMAND_UNKNOWN_COMMAND;
 
 }
 
@@ -163,12 +197,14 @@ static bool strEqualsIgnoreCase(
 	const char *s1,
 	const char *s2
 ){
+	if(s1 == NULL || s2 == NULL) return false;
+
     while (*s1 && *s2) {
-        if (tolower((unsigned char)*s1) != tolower((unsigned char)*s2))
-            return false;
+    	if (tolower((unsigned char)*s1) != tolower((unsigned char)*s2)) return false;
+
         s1++;
         s2++;
     }
-    return *s1 == *s2;
+    return *s1 == '\0' && *s2 == '\0';
 }
 
