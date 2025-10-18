@@ -1,0 +1,314 @@
+/*
+ * myApp_mef.c
+ *
+ *  Created on: Oct 12, 2025
+ *      Author: Paulo
+ */
+#include "myApp_mef.h"
+
+/*----- Glovals defines -------*/
+
+/*Fixed size of incoming temperature buffer.*/
+#define SIZE_TEMP_REGISTER  		2
+/*Maximum message size to print*/
+#define SIZE_BUFFER_MESSAGE_ERROR 	100
+/*RFC UID Size*/
+#define UID_LEN						5
+/*Conversion buffer size for snprintf*/
+#define MESSAGE_LEN					80
+/*LED toggle time in ms*/
+#define TOGGLE_INTERVAL				300
+
+static bool cmdUmbral 	= false; /*Reception flag. Command THRESHOLD*/
+static bool cmdStatus 	= false; /*Reception flag. Command STATUS*/
+static bool cmdRST 		= false; /*Reception flag. Command RESET*/
+static bool nfcUID		= false; /*Reception flag. Recognized UID*/
+static bool measureOk 	= false; /*Reception flag. Temperature measurement OK*/
+static float umbralTemp	= 0;	 /*Variable that stores the temperature threshold.*/
+static float temperature = 0;	 /*Variable that stores the temperature.*/
+static char messageTemperature[SIZE_BUFFER_MESSAGE_ERROR]; /*Variable where the printable temperature message is stored*/
+static uint8_t uidAuthor[UID_LEN] = {0xA3, 0x5E, 0x1B, 0xDA, 0x3C}; /*Variable containing the authorized UID*/
+
+/*Variable containing errors and printable messages*/
+static const char *messagePrint[MEF_ERROR_COUNT] = {
+	"\r\n[myApp_mef] ERROR: MCP9601 could not be initialized.\0",
+	"\r\n[myApp_mef] INFO: MCP9601 init ok.\0",
+	"\r\n[myApp_mef] ERROR: MRFC522 could not be initialized.\0",
+	"\r\n[myApp_mef] INFO: MRFC522 init ok.\0",
+	"\r\n[myApp_mef] INFO: UART init ok.\0",
+	"\r\n[myApp_mef] ERROR: Unrecognized UART command.\r\n\0",
+	"\r\n[myApp_mef] ERROR: Temperature could not be obtained.\r\n\0",
+	"\r\n[myApp_mef] ERROR: Temperature buffer null.\r\n\0",
+	"\r\n[myApp_mef] ERROR: UID read error.\r\n\0",
+	"\r\n[myApp_mef] INFO: UID authorized. Reset Ok.\r\n\0",
+	"\r\n[myApp_mef] ERROR: Unrecognized state.\r\n\0",
+	"\r\n[myApp_mef] ERROR: Invalid entry threshold.\r\n\0",
+	"\r\n[myApp_mef] INFO: RESET command receive.\r\n\0",
+	"\r\n[myApp_mef] INFO: Threshold changed correctly.\r\n\0",
+	"\r\n[myApp_mef] INFO: Temperature Alarm.\r\n\0"
+};
+
+/*Static methods.*/
+static void readTemperature(void);
+static bool calculateTemperature(uint8_t *rxBuffer);
+static void getUARTcommands(void);
+static float umbralConvert(uint8_t* param);
+static void getUID(void);
+
+/*
+ * Function Name: initPeripheralsMEF
+ * Function Description: Initializes UART, I2C, SPI peripherals and configures RFID and temperature transceivers.
+ * Input Parameters: None.
+ * Return value: True if the process success, false in any other case.
+ */
+bool initPeripheralsMEF(void){
+
+	gpioInit();
+
+	if(!uartInit()) return false;
+	else uartSendString((uint8_t*)(messagePrint[MEF_ERROR_OK_UART_INIT]));
+
+	if(!MFRC522_Init()){ /*MEF_ERROR_MRFC522_INIT*/
+		uartSendString((uint8_t*)(messagePrint[MEF_ERROR_MRFC522_INIT]));
+	  	return false;
+	}else uartSendString((uint8_t*)(messagePrint[MEF_ERROR_OK_MRFC522_INIT]));
+
+	if(!mcp960xInit((uint16_t)(MCP960X_ID_67))){
+		uartSendString((uint8_t*)(messagePrint[MEF_ERROR_MCP9601_INIT]));
+		return false;
+	}else uartSendString((uint8_t*)(messagePrint[MEF_ERROR_OK_MCP9601_INIT]));
+
+	uartSendString((uint8_t*)("\r\n\r\n----------- Temperature System -----------"));
+	uartSendString((uint8_t*)("\r\n* For RESET alarm, write command RESET."));
+	uartSendString((uint8_t*)("\r\n* For get STATUS, write STATUS."));
+	uartSendString((uint8_t*)("\r\n* For set thresohold, write THRESHOLD: and the float thresold without space."));
+	uartSendString((uint8_t*)("\r\n+ Please put the threashold value:\r\n\r\n"));
+
+	return true;
+}
+
+/*
+ * Function Name: updateState
+ * Function Description: Calculate, according to the current state of the FSM, the new state.
+ * Input Parameters: _mefStates actState - Actual state.
+ * Return value: _mefStates - The new state.
+ */
+_mefStates updateState(_mefStates actState){
+
+	_mefStates newState;
+
+	switch(actState){
+		case MEF_STATE_REQUEST_THRESHOLD_UART:
+			if(cmdUmbral){
+				cmdUmbral = false;
+				newState = MEF_STATE_MEASURE_TEMPERATURE_LISTEN_UART;
+			}else newState = MEF_STATE_REQUEST_THRESHOLD_UART;
+			break;
+		case MEF_STATE_MEASURE_TEMPERATURE_LISTEN_UART:
+			if(cmdUmbral){
+				cmdUmbral = false;
+				newState = MEF_STATE_REWRITE_THRESHOLD_TEMPERATURE;
+			}else if(measureOk){
+				measureOk = false;
+				newState = MEF_STATE_SAVE_MEDITION;
+			}else newState = MEF_STATE_MEASURE_TEMPERATURE_LISTEN_UART;
+			break;
+		case MEF_STATE_SAVE_MEDITION:
+			if(temperature > umbralTemp) newState = MEF_STATE_ALARM;
+			else if(cmdStatus){
+				cmdStatus = false;
+				newState = MEF_STATE_PRINT_TEMPERATURE;
+			}else newState = MEF_STATE_MEASURE_TEMPERATURE_LISTEN_UART;
+			break;
+		case MEF_STATE_ALARM:
+			if(cmdStatus) newState = MEF_STATE_PRINT_ALARM;
+			else if(cmdRST) newState = MEF_STATE_NOTIFY_RESET;
+			else if(nfcUID) newState = MEF_STATE_NOTIFY_RESET;
+			else newState = MEF_STATE_ALARM;
+			break;
+		case MEF_STATE_PRINT_ALARM:
+			newState = MEF_STATE_ALARM;
+			break;
+		case MEF_STATE_PRINT_TEMPERATURE:
+		case MEF_STATE_NOTIFY_RESET:
+		case MEF_STATE_REWRITE_THRESHOLD_TEMPERATURE:
+			newState = MEF_STATE_MEASURE_TEMPERATURE_LISTEN_UART;
+			break;
+		default:
+			newState = MEF_STATE_REQUEST_THRESHOLD_UART;
+			break;
+	}
+
+	return newState;
+}
+
+/*
+ * Function Name: executeState
+ * Function Description: Execute the actions to be implemented in each state.
+ * Input Parameters: _mefStates newState - The new state.
+ * Return value: None.
+ */
+void executeState(_mefStates newState){
+
+//	char msj[MESSAGE_LEN] = {0};
+
+	switch(newState){
+		case MEF_STATE_REQUEST_THRESHOLD_UART:
+			getUARTcommands();
+			break;
+		case MEF_STATE_MEASURE_TEMPERATURE_LISTEN_UART:
+			getUARTcommands();
+			readTemperature();
+			break;
+		case MEF_STATE_SAVE_MEDITION:
+			memset(messageTemperature, 0x00, sizeof(messageTemperature));
+			snprintf(messageTemperature, sizeof(messageTemperature), "\r\n[myApp_mef] Temperature: %.1f °C\r\n", temperature);
+			break;
+		case MEF_STATE_ALARM:
+			ledToggleNonBlocking(TOGGLE_INTERVAL);
+			getUID();
+			getUARTcommands();
+			break;
+		case MEF_STATE_PRINT_TEMPERATURE:
+			if(messageTemperature[0] != 0) uartSendString((uint8_t*)(messageTemperature));
+			break;
+		case MEF_STATE_NOTIFY_RESET:
+			ledOff();
+			if(cmdRST){
+				cmdRST = false;
+				uartSendString((uint8_t*)(messagePrint[MEF_ERROR_RST_COMMAND_RECEIVE]));
+			}else if(nfcUID){
+				nfcUID = false;
+				uartSendString((uint8_t*)(messagePrint[MEF_ERROR_AUTHOR_TAG_NFC]));
+			}
+			break;
+		case MEF_STATE_REWRITE_THRESHOLD_TEMPERATURE:
+			uartSendString((uint8_t*)(messagePrint[MEF_ERROR_THRESHOLD_CHANGE]));
+			break;
+		case MEF_STATE_PRINT_ALARM:
+			cmdStatus = false;
+			uartSendString((uint8_t*)(messagePrint[MEF_ERROR_STATUS_ALARM]));
+			break;
+		default:
+			break;
+	}
+}
+
+/*
+ * Function Name:getUID
+ * Function Description: Gets and compares the incoming UID with the authorized UID.
+ * Input Parameters: None.
+ * Return value: None.
+ */
+static void getUID(void){
+
+	uint8_t str[16] = {0};
+	uint8_t sNum[UID_LEN] = {0};
+
+	if((MFRC522_Request((uint8_t)(PICC_REQIDL), str) != NFC_OK) || (MFRC522_Anticoll(str) != NFC_OK)){
+		return;
+	}
+
+	memcpy(sNum, str, sizeof(sNum));
+
+	nfcUID = (memcmp(uidAuthor, sNum, UID_LEN) == 0);
+}
+
+/*
+ * Function Name: readTemperature
+ * Function Description: Obtains and processes the bytes corresponding to the sensed temperature.
+ * Input Parameters: None.
+ * Return value: None.
+ */
+static void readTemperature(void){
+
+	uint16_t devAddr = MCP960X_ID_67;
+	uint8_t rxBuffer[SIZE_TEMP_REGISTER];
+
+	if(mcp960xReadTemperature(devAddr, rxBuffer, (uint16_t)(sizeof(rxBuffer))) != HAL_OK){
+		uartSendString((uint8_t*)(messagePrint[MEF_ERROR_GET_TEMPERATURE]));
+		return;
+	}else{
+		measureOk = calculateTemperature(rxBuffer);
+	}
+
+}
+
+/*
+ * Function Name: calculateTemperature
+ * Function Description: Calculates the temperature based on the manufacturer's datasheet (MCP960x).
+ * Input Parameters: uint8_t *rxBuffer - A pointer of the obtained temperature.
+ * Return value: True if the calculation was performed. False otherwise.
+ */
+static bool calculateTemperature(uint8_t *rxBuffer){
+
+	if(rxBuffer == NULL){
+		uartSendString((uint8_t*)(messagePrint[MEF_ERROR_BUFFER_TEMPERATURE]));
+		return false;
+	}
+
+	if((rxBuffer[0] & 0x80) == 0x80){ /*When the temperature is lower than 0°*/
+		temperature = (float)((rxBuffer[0] * 16.0f) + (rxBuffer[1] / 16.0f) - 4096.0f);
+	}else{ /*Otherwise if the temperature is greater than 0°*/
+		temperature = (float)((rxBuffer[0] * 16.0f) + (rxBuffer[1] / 16.0f));
+	}
+
+	return true;
+}
+
+/*
+ * Function Name: getUARTcommands
+ * Function Description: Checks if there is a new command received by UART and sets the necessary flags.
+ * Input Parameters: None.
+ * Return value: None.
+ */
+static void getUARTcommands(void){
+
+	_commandPC comando;
+
+	char msj[MESSAGE_LEN] = {0};
+
+	comando = getCommand();
+
+	switch(comando){
+		case PC_COMMAND_RST:
+			cmdRST = true;
+			break;
+		case PC_COMMAND_STATUS:
+			cmdStatus = true;
+			break;
+		case PC_COMMAND_THRESHOLD:
+			float val = umbralConvert(getParameter());
+			if(!isnan(val)){
+				cmdUmbral = true;
+				umbralTemp = val;
+				snprintf(msj, sizeof(msj), "\r\n[myApp_mef] INFO: New threshold: %.1f °C\r\n", umbralTemp);
+				uartSendString((uint8_t*)(msj));
+			}
+			break;
+		 case PC_COMMAND_UNKNOWN_COMMAND:
+			 uartSendString((uint8_t*)(messagePrint[MEF_ERROR_UART_UNKNOWN_COMMAND]));
+			 break;
+		 default:
+			 break;
+	  }
+}
+
+/*
+ * Function Name: umbralConvert
+ * Function Description: Receives and converts the incoming parameter to float.
+ * Input Parameters: uint8_t* param - A pointer containing the parameter to be converted.
+ * Return value: A float value. On error, returns NAN.
+ */
+static float umbralConvert(uint8_t* param){
+
+	char *endptr;
+	float value = strtof((char*)param, &endptr);
+
+	if (param == (uint8_t*)endptr) {
+		uartSendString((uint8_t*)(messagePrint[MEF_ERROR_NOCONVERT_THRESHOLD]));
+		return NAN;
+	}
+
+	return value;
+}

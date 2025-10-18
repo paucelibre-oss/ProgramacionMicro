@@ -68,12 +68,12 @@ bool initPeripheralsMEF(void){
 	if(!uartInit()) return false;
 	else uartSendString((uint8_t*)(messagePrint[MEF_ERROR_OK_UART_INIT]));
 
-	if(MFRC522_Init() != HAL_OK){ /*MEF_ERROR_MRFC522_INIT*/
+	if(!MFRC522_Init()){ /*MEF_ERROR_MRFC522_INIT*/
 		uartSendString((uint8_t*)(messagePrint[MEF_ERROR_MRFC522_INIT]));
 	  	return false;
 	}else uartSendString((uint8_t*)(messagePrint[MEF_ERROR_OK_MRFC522_INIT]));
 
-	if(mcp960xInit((uint16_t)(MCP960X_ID_67)) != HAL_OK){
+	if(!mcp960xInit((uint16_t)(MCP960X_ID_67))){
 		uartSendString((uint8_t*)(messagePrint[MEF_ERROR_MCP9601_INIT]));
 		return false;
 	}else uartSendString((uint8_t*)(messagePrint[MEF_ERROR_OK_MCP9601_INIT]));
@@ -225,7 +225,7 @@ static void readTemperature(void){
 	uint16_t devAddr = MCP960X_ID_67;
 	uint8_t rxBuffer[SIZE_TEMP_REGISTER];
 
-	if(mcp960xReadTemperature(devAddr, rxBuffer, (uint16_t)(sizeof(rxBuffer))) != HAL_OK){
+	if(!mcp960xReadTemperature(devAddr, rxBuffer, (uint16_t)(sizeof(rxBuffer)))){
 		uartSendString((uint8_t*)(messagePrint[MEF_ERROR_GET_TEMPERATURE]));
 		return;
 	}else{

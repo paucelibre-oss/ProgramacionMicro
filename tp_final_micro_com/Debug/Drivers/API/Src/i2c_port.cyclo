@@ -1,0 +1,11 @@
+../Drivers/API/Src/i2c_port.c:19:6:clearFlagTxI2C	1
+../Drivers/API/Src/i2c_port.c:20:6:clearFlagRxI2C	1
+../Drivers/API/Src/i2c_port.c:21:6:getRxFlagStatusI2C	1
+../Drivers/API/Src/i2c_port.c:22:6:getTxFlagStatusI2C	1
+../Drivers/API/Src/i2c_port.c:24:6:HAL_I2C_MemRxCpltCallback	2
+../Drivers/API/Src/i2c_port.c:30:6:HAL_I2C_MemTxCpltCallback	2
+../Drivers/API/Src/i2c_port.c:41:6:I2C_Init	2
+../Drivers/API/Src/i2c_port.c:58:6:readRegisterI2C_IT	3
+../Drivers/API/Src/i2c_port.c:74:6:writeRegisterI2C_IT	3
+../Drivers/API/Src/i2c_port.c:90:6:readRegisterI2C	3
+../Drivers/API/Src/i2c_port.c:104:6:writeRegisterI2C	3

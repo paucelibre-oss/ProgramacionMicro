@@ -106,8 +106,8 @@ typedef enum {
 	MCP960X_ID_67
 } _idSensors;
 
-HAL_StatusTypeDef mcp960xInit(uint16_t devAddr);
-HAL_StatusTypeDef mcp960xReadTemperature(uint16_t devAddr, uint8_t* rxBuffer, uint16_t rxLength);
+bool mcp960xInit(uint16_t devAddr);
+bool mcp960xReadTemperature(uint16_t devAddr, uint8_t* rxBuffer, uint16_t rxLength);
 
 #ifdef __cplusplus
 }

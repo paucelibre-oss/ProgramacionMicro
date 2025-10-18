@@ -57,7 +57,7 @@ typedef enum {
 #define     TReloadRegL           0x2D
 
 // Functions for manipulating the MFRC522
-HAL_StatusTypeDef MFRC522_Init(void);
+bool MFRC522_Init(void);
 _statusRC522 MFRC522_Request(uint8_t reqMode, uint8_t *TagType);
 _statusRC522 MFRC522_Anticoll(uint8_t *serNum);
 

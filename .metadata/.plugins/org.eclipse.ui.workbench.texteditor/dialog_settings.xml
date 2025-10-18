@@ -3,38 +3,38 @@
 	<item key="hasShownOverlayPopupBefore" value="true"/>
 	<item key="replaceBarOpen" value="true"/>
 	<list key="replacehistory">
+		<item value=") return false;"/>
+		<item value="return true;"/>
+		<item value="bool "/>
+		<item value="Return value: Bool -"/>
+		<item value="If success True, , in other cases False"/>
+		<item value="bool mcp"/>
+		<item value="static bool"/>
+		<item value="bool"/>
+		<item value="return false"/>
+		<item value="return false;"/>
 		<item value="LED_GPIO_Port"/>
 		<item value="LED_Pin"/>
 		<item value="API_INC_MYAPP_"/>
 		<item value="NFC_NOTAGERR"/>
 		<item value="NFC_OK"/>
-		<item value="NFC_ERROR"/>
-		<item value="uint8_t"/>
-		<item value="nfcRST(TURN_ON);"/>
-		<item value="nfcSS(TURN_ON);"/>
-		<item value="nfcSS(TURN_OFF);"/>
-		<item value="uint32_t"/>
-		<item value="SPI"/>
-		<item value="nfcRTS(TURN_ON);"/>
-		<item value="GPIOx"/>
-		<item value="NFC_STATUS_ERROR"/>
 	</list>
 	<list key="searchhistory">
+		<item value=" != HAL_OK) return HAL_ERROR;"/>
+		<item value="return HAL_OK;"/>
+		<item value="HAL_StatusTypeDef "/>
+		<item value="Return value: HAL_StatusTypeDef -"/>
+		<item value="If success HAL_OK, in other cases HAL_ERROR."/>
+		<item value="HAL_StatusTypeDef mcp"/>
+		<item value="static HAL_StatusTypeDef "/>
+		<item value="HAL_StatusTypeDef"/>
+		<item value="return HAL_ERROR"/>
 		<item value="MESSAGE_LEN"/>
 		<item value="GPIOB"/>
 		<item value="GPIO_PIN_7"/>
 		<item value="messageStatus"/>
 		<item value="messagePrint[MEF_ERROR_INCOMPATIBLE_TEMPERATURE]"/>
 		<item value="static "/>
-		<item value="MEF_ERROR_UART_UNKNOWN_COMMAND"/>
-		<item value="stdio.h"/>
-		<item value="stdlib.h"/>
-		<item value="INC_RC522"/>
-		<item value="MI_NOTAGERR"/>
-		<item value="MI_OK"/>
-		<item value="MI_ERR"/>
-		<item value="TxControlReg"/>
-		<item value="uchar"/>
 	</list>
 	<section name="org.eclipse.ui.texteditor.FindReplaceDialog">
 		<item key="selection" value=""/>

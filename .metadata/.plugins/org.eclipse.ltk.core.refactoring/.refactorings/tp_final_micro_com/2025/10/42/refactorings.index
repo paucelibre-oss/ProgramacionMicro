@@ -1,2 +1,5 @@
 1760503866851	Rename resource 'RC522.c'
 1760503881036	Rename resource 'RC522.h'
+1760804417657	Rename resource 'spi.c'
+1760804436011	Rename resource 'i2c.c'
+1760804461417	Rename resource 'gpio.c'

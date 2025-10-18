@@ -29,7 +29,7 @@ Drivers/API/Src/myApp_PCcom.o: ../Drivers/API/Src/myApp_PCcom.c \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr_ex.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_spi.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h \
- ../Core/Inc/usart.h
+ ../Drivers/API/Inc/usart.h
 ../Drivers/API/Inc/myApp_PCcom.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h:
 ../Core/Inc/stm32f4xx_hal_conf.h:
@@ -60,4 +60,4 @@ Drivers/API/Src/myApp_PCcom.o: ../Drivers/API/Src/myApp_PCcom.c \
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr_ex.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_spi.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h:
-../Core/Inc/usart.h:
+../Drivers/API/Inc/usart.h:

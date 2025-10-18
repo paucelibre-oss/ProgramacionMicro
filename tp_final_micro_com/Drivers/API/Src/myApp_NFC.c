@@ -138,9 +138,9 @@ static void MFRC522_Reset(void){
  * Input: None
  * Return value: None
 */
-HAL_StatusTypeDef MFRC522_Init(void){
+bool MFRC522_Init(void){
 
-	if(SPI_Init() != HAL_OK) return HAL_ERROR;
+	if(!SPI_Init()) return false;
 
 	nfcSS(TURN_ON);
 	HAL_Delay(5);
@@ -159,7 +159,7 @@ HAL_StatusTypeDef MFRC522_Init(void){
 
 	AntennaOn();
 
-	return HAL_OK;
+	return true;
 }
 
 /*

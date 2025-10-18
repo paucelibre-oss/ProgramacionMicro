@@ -29,7 +29,7 @@ Drivers/API/Src/myApp_NFC.o: ../Drivers/API/Src/myApp_NFC.c \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr_ex.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_spi.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h \
- ../Core/Inc/gpio.h ../Core/Inc/spi.h
+ ../Drivers/API/Inc/gpio.h ../Drivers/API/Inc/spi.h
 ../Drivers/API/Inc/myApp_NFC.h:
 ../Drivers/API/Inc/myApp_GPIO.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h:
@@ -61,5 +61,5 @@ Drivers/API/Src/myApp_NFC.o: ../Drivers/API/Src/myApp_NFC.c \
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr_ex.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_spi.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h:
-../Core/Inc/gpio.h:
-../Core/Inc/spi.h:
+../Drivers/API/Inc/gpio.h:
+../Drivers/API/Inc/spi.h:

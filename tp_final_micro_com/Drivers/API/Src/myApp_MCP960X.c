@@ -7,37 +7,37 @@
 #include <myApp_MCP960X.h>
 
 /*Static methods.*/
-static HAL_StatusTypeDef mcp960xGetVersion(uint16_t devAddr, uint8_t* rxBuffer);
-static HAL_StatusTypeDef mcp960xConfFilter(uint16_t devAddr, uint8_t thermoType, uint8_t filterOrder);
-static HAL_StatusTypeDef mcp960xDevConfRegister(uint8_t devAddr, uint8_t coldResol, uint8_t adcResol, uint8_t burstSample, uint8_t shutDMode);
+static bool mcp960xGetVersion(uint16_t devAddr, uint8_t* rxBuffer);
+static bool mcp960xConfFilter(uint16_t devAddr, uint8_t thermoType, uint8_t filterOrder);
+static bool mcp960xDevConfRegister(uint8_t devAddr, uint8_t coldResol, uint8_t adcResol, uint8_t burstSample, uint8_t shutDMode);
 
 /*
  * Function Name: mcp960xInit
  * Function Description: Initialize the MCP960x chil, and check its version.
  * Input Parameters: uint16_t devAddr - I2C address of the MCP960x
- * Return value: HAL_StatusTypeDef - If success HAL_OK, in other cases HAL_ERROR.
+ * Return value: Bool - If success True, in other cases False.
  */
-HAL_StatusTypeDef mcp960xInit(uint16_t devAddr){
+bool mcp960xInit(uint16_t devAddr){
 
 	uint8_t rxBuffer = 0;
 
-	if(I2C_Init() != HAL_OK) return HAL_ERROR;
+	if(!I2C_Init()) return false;
 
-	if(mcp960xGetVersion(devAddr, &rxBuffer) != HAL_OK) return HAL_ERROR;
-	if(rxBuffer != VERSION_MCP9601 && rxBuffer != VERSION_MCP9600) return HAL_ERROR;
-	if(mcp960xConfFilter(devAddr, Type_K, filter_IIR4) != HAL_OK) return HAL_ERROR;
-	if(mcp960xDevConfRegister(devAddr, cold_0_0625, MCP960X_ADCRESOLUTION_18, burst_samples_1, Normal_operation) != HAL_OK)  return HAL_ERROR;
+	if(!mcp960xGetVersion(devAddr, &rxBuffer)) return false;
+	if(rxBuffer != VERSION_MCP9601 && rxBuffer != VERSION_MCP9600) return false;
+	if(!mcp960xConfFilter(devAddr, Type_K, filter_IIR4)) return false;
+	if(!mcp960xDevConfRegister(devAddr, cold_0_0625, MCP960X_ADCRESOLUTION_18, burst_samples_1, Normal_operation))  return false;
 
-	return HAL_OK;
+	return true;
 }
 
 /*
  * Function Name: mcp960xGetVersion
  * Function Description: Get the version of the MCP960x.
  * Input Parameters: uint16_t devAddr - I2C address of the MCP960x. uint8_t* rxBuffer - A pointer for receiving data.
- * Return value: HAL_StatusTypeDef - If success HAL_OK, in other cases HAL_ERROR.
+ * Return value: Bool - If success True, in other cases False
  */
-static HAL_StatusTypeDef mcp960xGetVersion(
+static bool mcp960xGetVersion(
 	uint16_t devAddr,
 	uint8_t* rxBuffer
 ){
@@ -49,9 +49,9 @@ static HAL_StatusTypeDef mcp960xGetVersion(
  * Function Description: Configure the FIR filter of the MCP960x.
  * Input Parameters: uint16_t devAddr - I2C address of the MCP960x. uint8_t thermoType - Thermocouple type.
  * 					 uint8_t filterOrder - Filter order-
- * Return value: HAL_StatusTypeDef - If success HAL_OK, in other cases HAL_ERROR.
+ * Return value: Bool - If success True, in other cases False
  */
-static HAL_StatusTypeDef mcp960xConfFilter(
+static bool mcp960xConfFilter(
 	uint16_t devAddr,
 	uint8_t thermoType,
 	uint8_t filterOrder
@@ -65,9 +65,9 @@ static HAL_StatusTypeDef mcp960xConfFilter(
  * Function Description: Sets the ADC resolution and operating mode of the MCP960x.
  * Input Parameters: uint8_t devAddr - I2C address of the MCP960x. uint8_t coldResol - Cold junction resolution.
 					 uint8_t adcResol - ADC Resolution. uint8_t burstSample - Burst mode. uint8_t shutDMode - Shut Down mode.
- * Return value: HAL_StatusTypeDef - If success HAL_OK, in other cases HAL_ERROR.
+ * Return value: Bool - If success True, in other cases False
  */
-static HAL_StatusTypeDef mcp960xDevConfRegister(
+static bool mcp960xDevConfRegister(
 	uint8_t devAddr,
 	uint8_t coldResol,
 	uint8_t adcResol,
@@ -83,9 +83,9 @@ static HAL_StatusTypeDef mcp960xDevConfRegister(
  * Function Description: Obtains the temperature measurement made by the MCP960x.
  * Input Parameters: uint8_t devAddr - I2C address of the MCP960x. uint8_t* rxBuffer - A pointer for receiving data.
  * 					 uint16_t rxLength - Receive buffer size.
- * Return value: Temperature value in two bytes.
+ * Return value: Bool - If success True, in other cases False
  */
-HAL_StatusTypeDef mcp960xReadTemperature(
+bool mcp960xReadTemperature(
 	uint16_t devAddr,
 	uint8_t* rxBuffer,
 	uint16_t rxLength

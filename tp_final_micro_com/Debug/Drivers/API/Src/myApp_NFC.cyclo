@@ -5,7 +5,7 @@
 ../Drivers/API/Src/myApp_NFC.c:105:13:ClearBitMask	1
 ../Drivers/API/Src/myApp_NFC.c:118:13:AntennaOn	1
 ../Drivers/API/Src/myApp_NFC.c:130:13:MFRC522_Reset	1
-../Drivers/API/Src/myApp_NFC.c:141:19:MFRC522_Init	2
+../Drivers/API/Src/myApp_NFC.c:141:6:MFRC522_Init	2
 ../Drivers/API/Src/myApp_NFC.c:175:16:MFRC522_ToCard	16
 ../Drivers/API/Src/myApp_NFC.c:276:14:MFRC522_Request	3
 ../Drivers/API/Src/myApp_NFC.c:297:14:MFRC522_Anticoll	4

@@ -1,6 +1,7 @@
 Drivers/API/Src/myApp_mef.o: ../Drivers/API/Src/myApp_mef.c \
  ../Drivers/API/Inc/myApp_mef.h ../Drivers/API/Inc/myApp_MCP960X.h \
- ../Core/Inc/i2c.h ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h \
+ ../Drivers/API/Inc/i2c.h \
+ ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h \
  ../Core/Inc/stm32f4xx_hal_conf.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_def.h \
@@ -29,13 +30,13 @@ Drivers/API/Src/myApp_mef.o: ../Drivers/API/Src/myApp_mef.c \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr_ex.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_spi.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h \
- ../Drivers/API/Inc/myApp_PCcom.h ../Core/Inc/usart.h \
- ../Drivers/API/Inc/myApp_GPIO.h ../Core/Inc/gpio.h \
- ../Drivers/API/Inc/myApp_NFC.h ../Core/Inc/spi.h \
+ ../Drivers/API/Inc/myApp_PCcom.h ../Drivers/API/Inc/usart.h \
+ ../Drivers/API/Inc/myApp_GPIO.h ../Drivers/API/Inc/gpio.h \
+ ../Drivers/API/Inc/myApp_NFC.h ../Drivers/API/Inc/spi.h \
  ../Drivers/API/Inc/myApp_mef_errors.h
 ../Drivers/API/Inc/myApp_mef.h:
 ../Drivers/API/Inc/myApp_MCP960X.h:
-../Core/Inc/i2c.h:
+../Drivers/API/Inc/i2c.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h:
 ../Core/Inc/stm32f4xx_hal_conf.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc.h:
@@ -66,9 +67,9 @@ Drivers/API/Src/myApp_mef.o: ../Drivers/API/Src/myApp_mef.c \
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_spi.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h:
 ../Drivers/API/Inc/myApp_PCcom.h:
-../Core/Inc/usart.h:
+../Drivers/API/Inc/usart.h:
 ../Drivers/API/Inc/myApp_GPIO.h:
-../Core/Inc/gpio.h:
+../Drivers/API/Inc/gpio.h:
 ../Drivers/API/Inc/myApp_NFC.h:
-../Core/Inc/spi.h:
+../Drivers/API/Inc/spi.h:
 ../Drivers/API/Inc/myApp_mef_errors.h:
